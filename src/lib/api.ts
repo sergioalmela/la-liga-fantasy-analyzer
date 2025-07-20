@@ -97,15 +97,16 @@ export interface PlayerAnalysis {
 
 async function makeRequest<T>(url: string, cookie: string): Promise<ApiResponse<T>> {
   try {
-    const response = await fetch(url, {
+    const apiUrl = new URL(url);
+    const path = apiUrl.pathname + apiUrl.search;
+    
+    const response = await fetch(`/api/fantasy?path=${encodeURIComponent(path)}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${cookie}`,
       },
     });
-
-    console.log(response);
 
     if (!response.ok) {
       return {
