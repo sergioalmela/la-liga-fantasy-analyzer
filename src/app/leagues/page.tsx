@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { getLeagues, type League } from '@/lib/api';
 import { getAuthToken } from '@/lib/auth';
-import { Trophy, Users, Calendar } from 'lucide-react';
+import { Trophy, Users, Check, Shield } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LeaguesPage() {
@@ -22,6 +22,7 @@ export default function LeaguesPage() {
 
       try {
         const result = await getLeagues(token);
+
         if (result.error) {
           setError(result.error);
         } else {
@@ -76,16 +77,30 @@ export default function LeaguesPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
-                        {league.team && (
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <Users className="w-4 h-4" />
-                            <span>Team: {league.team.name}</span>
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <Users className="w-4 h-4" />
+                          <span>Players: {league.managersNumber}</span>
+                        </div>
+                        
+                        {league.premium && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Check className="w-4 h-4 text-green-600" />
+                            <span className="text-green-600">Premium</span>
                           </div>
                         )}
-                        
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Calendar className="w-4 h-4" />
-                          <span>League ID: {league.id}</span>
+
+                        <div className="flex items-center gap-2 text-sm">
+                          {league.team.isAdmin ? (
+                            <>
+                              <Shield className="w-4 h-4 text-blue-600" />
+                              <span className="text-blue-600">Admin</span>
+                            </>
+                          ) : (
+                            <>
+                              <Users className="w-4 h-4 text-gray-600" />
+                              <span className="text-gray-600">Member</span>
+                            </>
+                          )}
                         </div>
 
                         <div className="pt-4 flex gap-2">
