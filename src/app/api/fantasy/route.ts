@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data);
   } catch (error) {
     console.error('API proxy error:', error);
-    return NextResponse.json(
+    return Response.json(
       { error: 'Failed to fetch data' },
       { status: 500 }
     );

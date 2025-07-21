@@ -67,6 +67,26 @@ export function removeAuthToken(): void {
   localStorage.removeItem('auth_token');
 }
 
+export function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const now = Date.now() / 1000;
+    return payload.exp < now;
+  } catch (error) {
+    console.error('Error checking token expiration:', error);
+    return true;
+  }
+}
+
 export function isAuthenticated(): boolean {
-  return getAuthToken() !== null;
+  const token = getAuthToken();
+  if (!token) return false;
+  
+  if (isTokenExpired(token)) {
+    console.log('Token expired, removing from storage');
+    removeAuthToken();
+    return false;
+  }
+  
+  return true;
 }
