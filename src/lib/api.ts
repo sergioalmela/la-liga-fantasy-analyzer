@@ -7,10 +7,63 @@ export interface ApiResponse<T> {
 
 export interface League {
   id: string;
-  name: string;
-  team?: {
+  access: string;
+  type: {
     id: string;
-    name: string;
+    canBeDuplicated: boolean;
+    assets: {
+      logo_list_item: string;
+      logo_white: string;
+    };
+    sponsor: {
+      id: number;
+      name: string;
+    };
+    prizeInformation: {
+      title: string;
+      description: string;
+    };
+  };
+  managersNumber: number;
+  name: string;
+  config: {
+    features: {
+      buyoutClause: boolean;
+    };
+    premiumFeatures: {
+      formations: boolean;
+      captain: boolean;
+      bench: boolean;
+      loan: boolean;
+      ideal: boolean;
+      coach: boolean;
+    };
+    premiumConfigurations: {
+      loan: {
+        duration: number;
+        maxLoans: number;
+        enableConclude: boolean;
+        minPercentage: number;
+      };
+      ideal: {
+        reward: number;
+      };
+    };
+  };
+  isDuplicated: boolean;
+  isSecondRound: boolean;
+  token: string;
+  description: string;
+  premium: boolean;
+  team: {
+    id: number;
+    money: number;
+    teamPoints: number;
+    playersNumber: number;
+    teamValue: number;
+    canPunctuate: boolean;
+    position: number | null;
+    isAdmin: boolean;
   };
 }
 
