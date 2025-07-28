@@ -9,9 +9,6 @@ import { useRouter } from 'next/navigation';
 
 const navigation = [
   { name: 'Leagues', href: '/leagues', icon: Trophy },
-  { name: 'My Players', href: '/players', icon: Users },
-  { name: 'Market', href: '/market', icon: ShoppingCart },
-  { name: 'Analysis', href: '/analysis', icon: TrendingUp },
 ];
 
 export function Navbar() {

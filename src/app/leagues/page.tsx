@@ -104,15 +104,20 @@ export default function LeaguesPage() {
                           )}
                         </div>
 
-                        <div className="pt-4 flex gap-2">
-                          <Link href="/players">
+                        <div className="pt-4 flex gap-2 flex-wrap">
+                          <Link href={`/leagues/${league.id}/players`}>
                             <Button size="sm" variant="primary">
                               My Players
                             </Button>
                           </Link>
-                          <Link href="/market">
+                          <Link href={`/leagues/${league.id}/market`}>
                             <Button size="sm" variant="outline">
                               Market
+                            </Button>
+                          </Link>
+                          <Link href={`/leagues/${league.id}/analysis`}>
+                            <Button size="sm" variant="outline">
+                              Analysis
                             </Button>
                           </Link>
                         </div>
@@ -133,29 +138,6 @@ export default function LeaguesPage() {
               </div>
             )}
 
-            {leagues.length > 0 && (
-              <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <h3 className="text-lg font-medium text-blue-900 mb-2">Quick Actions</h3>
-                <div className="flex flex-wrap gap-3">
-                  <Link href="/players">
-                    <Button variant="primary">
-                      <Users className="w-4 h-4 mr-2" />
-                      View My Squad
-                    </Button>
-                  </Link>
-                  <Link href="/market">
-                    <Button variant="outline">
-                      Browse Market
-                    </Button>
-                  </Link>
-                  <Link href="/analysis">
-                    <Button variant="outline">
-                      Player Analysis
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            )}
           </div>
         </main>
       </div>
