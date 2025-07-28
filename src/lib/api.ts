@@ -122,10 +122,12 @@ export async function getMyPlayers(cookie: string, leagueId: string): Promise<Ap
     return { data: null, error: 'Could not get team ID' };
   }
 
-  const teamId = leaguesResponse.data[0].team?.id;
-  if (!teamId) {
-    return { data: null, error: 'No team ID found' };
+  const league = leaguesResponse.data.find(l => l.id === leagueId);
+  if (!league || !league.team?.id) {
+    return { data: null, error: 'League not found or no team ID found' };
   }
+
+  const teamId = league.team.id;
 
   const url = `${API_BASE}${endpoints.team.info(teamId.toString())}?x-lang=es`;
   const response = await makeRequest<{ players: any[] }>(url, cookie);
