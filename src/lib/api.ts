@@ -1,164 +1,97 @@
+import {
+  ApiResponse,
+  League,
+  Player,
+  MarketPlayer,
+  MarketValuePoint,
+  TrendAnalysis,
+  PlayerAnalysis,
+  MarketHistoryEntry,
+  MarketValueHistory,
+  UserRegion,
+  UserDivision,
+  UserInfo,
+  TeamMoney,
+  TeamLineUp,
+  PlayerPosition,
+  PlayerMaster,
+  TeamInfo,
+  LeagueRankingTeam,
+  LeagueRanking,
+  Match,
+  MarketEvolutionPlayer,
+  MarketEvolution,
+  UserLeague,
+  TeamLineupByWeek,
+} from '../types/api';
+
 const API_BASE = 'https://api-fantasy.llt-services.com/api';
+const BASE_URL = "https://api-fantasy.llt-services.com";
 
-export interface ApiResponse<T> {
-  data: T | null;
-  error: string | null;
-}
+export const endpoints = {
+  // User endpoints
+  user: {
+    info: `/v3/user/me`,
+    leagues: `/v4/leagues`,
+  },
 
-export interface League {
-  id: string;
-  access: string;
-  type: {
-    id: string;
-    canBeDuplicated: boolean;
-    assets: {
-      logo_list_item: string;
-      logo_white: string;
-    };
-    sponsor: {
-      id: number;
-      name: string;
-    };
-    prizeInformation: {
-      title: string;
-      description: string;
-    };
-  };
-  managersNumber: number;
-  name: string;
-  config: {
-    features: {
-      buyoutClause: boolean;
-    };
-    premiumFeatures: {
-      formations: boolean;
-      captain: boolean;
-      bench: boolean;
-      loan: boolean;
-      ideal: boolean;
-      coach: boolean;
-    };
-    premiumConfigurations: {
-      loan: {
-        duration: number;
-        maxLoans: number;
-        enableConclude: boolean;
-        minPercentage: number;
-      };
-      ideal: {
-        reward: number;
-      };
-    };
-  };
-  isDuplicated: boolean;
-  isSecondRound: boolean;
-  token: string;
-  description: string;
-  premium: boolean;
+  // Player endpoints
+  player: {
+    stats: (playerId: string) => `/v3/player/${playerId}`,
+    marketValue: (playerId: string) => `/v3/player/${playerId}/market-value`,
+  },
+
+  // Team endpoints
   team: {
-    id: number;
-    money: number;
-    teamPoints: number;
-    playersNumber: number;
-    teamValue: number;
-    canPunctuate: boolean;
-    position: number | null;
-    isAdmin: boolean;
-  };
-}
+    info: (teamId: string) => `/v3/teams/${teamId}`,
+    money: (teamId: string) => `/v3/teams/${teamId}/money`,
+    lineup: (teamId: string) => `/v3/teams/${teamId}/lineup`,
+    lineupByWeek: (teamId: string, weekId: string) => `/v4/teams/${teamId}/lineup/week/${weekId}`,
+    favouritePlayers: (teamId: string) => `/v4/teams/${teamId}/favourite-players`,
+  },
 
-export interface Player {
-  id: string;
-  nickname?: string;
-  name: string;
-  positionId: number;
-  team: {
-    id: string;
-    name: string;
-  };
-  marketValue: number;
-  playerStatus: string;
-  points: number;
-  averagePoints: number;
-  buyoutClause?: number;
-  buyoutClauseLockedEndTime?: string;
-  saleInfo?: {
-    salePrice: number;
-    expirationDate: string;
-    numberOfOffers: number;
-  };
-}
+  // League endpoints
+  league: {
+    info: (leagueId: string) => `/v4/leagues/${leagueId}`,
+    team: (teamId: string, leagueId: string) => `/v3/leagues/${leagueId}/teams/${teamId}`,
+    ranking: (leagueId: string) => `/v5/leagues/${leagueId}/ranking`,
+    rankingByWeek: (leagueId: string, weekId: number) => `/v5/leagues/${leagueId}/ranking/${weekId}`,
+    market: (leagueId: string) => `/v3/league/${leagueId}/market`,
+    marketHistory: (leagueId: string) => `/v3/league/${leagueId}/market/history`,
+  },
 
-export interface MarketPlayer {
-  id: string;
-  playerMaster: {
-    id: string;
-    nickname?: string;
-    name: string;
-    positionId: number;
-    team: {
-      id: string;
-      name: string;
-    };
-    marketValue: number;
-    playerStatus: string;
-    points: number;
-    averagePoints: number;
-  };
-  salePrice: number;
-  expirationDate: string;
-  numberOfBids: number;
-}
+  // Market endpoints
+  market: {
+    makeBid: (leagueId: string, offerId: string) => `/v3/league/${leagueId}/market/${offerId}/bid`,
+  },
 
-export interface MarketValuePoint {
-  date: string;
-  marketValue: number;
-}
+  // Stats endpoints
+  stats: {
+    weekMatches: (weekId: string) => `/stats/v1/stats/week/${weekId}`,
+    marketEvolution: {
+      week: `/stats/v1/market/evolution/week`,
+      month: `/stats/v1/market/evolution/month`,
+      season: `/stats/v1/market/evolution/season`,
+    },
+  },
+};
 
-export interface TrendAnalysis {
-  trend: 'rising' | 'falling' | 'stable' | 'insufficient_data' | 'unknown';
-  change: number;
-  changePercent: number;
-  analysis: string;
-  latestValue?: number;
-  oldestValue?: number;
-  dataPoints: number;
-}
 
-export interface PlayerAnalysis {
-  id: string;
-  name: string;
-  isMyPlayer: boolean;
-  currentValue: number;
-  currentValueFormatted: string;
-  position: string;
-  team: string;
-  trends: {
-    last5Days: TrendAnalysis;
-    last10Days: TrendAnalysis;
-  };
-  alerts: string[];
-  saleExpirationHours: number | null;
-  buyoutProtectionHours: number | null;
-  buyoutClause?: number;
-  saleInfo?: {
-    salePrice: number;
-    expirationDate: string;
-    numberOfOffers: number;
-  };
-}
-
-async function makeRequest<T>(url: string, cookie: string): Promise<ApiResponse<T>> {
+async function makeRequest<T>(url: string, cookie: string, options: {
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  body?: any;
+} = {}): Promise<ApiResponse<T>> {
   try {
     const apiUrl = new URL(url);
     const path = apiUrl.pathname + apiUrl.search;
     
     const response = await fetch(`/api/fantasy?path=${encodeURIComponent(path)}`, {
-      method: 'GET',
+      method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${cookie}`,
       },
+      ...(options.body && { body: JSON.stringify(options.body) }),
     });
 
     if (!response.ok) {
@@ -179,7 +112,7 @@ async function makeRequest<T>(url: string, cookie: string): Promise<ApiResponse<
 }
 
 export async function getLeagues(cookie: string): Promise<ApiResponse<League[]>> {
-  const url = `${API_BASE}/v4/leagues?x-lang=es`;
+  const url = `${API_BASE}${endpoints.user.leagues}?x-lang=es`;
   return makeRequest<League[]>(url, cookie);
 }
 
@@ -194,7 +127,7 @@ export async function getMyPlayers(cookie: string, leagueId: string): Promise<Ap
     return { data: null, error: 'No team ID found' };
   }
 
-  const url = `${API_BASE}/v3/teams/${teamId}?x-lang=es`;
+  const url = `${API_BASE}${endpoints.team.info(teamId.toString())}?x-lang=es`;
   const response = await makeRequest<{ players: any[] }>(url, cookie);
 
   if (!response.data || !response.data.players) {
@@ -220,18 +153,26 @@ export async function getMyPlayers(cookie: string, leagueId: string): Promise<Ap
 }
 
 export async function getMarketPlayers(cookie: string, leagueId: string): Promise<ApiResponse<MarketPlayer[]>> {
-  const url = `${API_BASE}/v3/league/${leagueId}/market?x-lang=es`;
+  const url = `${API_BASE}${endpoints.league.market(leagueId)}?x-lang=es`;
   return makeRequest<MarketPlayer[]>(url, cookie);
 }
 
 export async function getPlayerMarketValue(cookie: string, playerId: string): Promise<ApiResponse<MarketValuePoint[]>> {
-  const url = `${API_BASE}/v3/player/${playerId}/market-value?x-lang=es`;
+  const url = `${API_BASE}${endpoints.player.marketValue(playerId)}?x-lang=es`;
   return makeRequest<MarketValuePoint[]>(url, cookie);
 }
 
 export async function getPlayerInfo(cookie: string, playerId: string): Promise<ApiResponse<any>> {
-  const url = `${API_BASE}/v3/player/${playerId}?x-lang=es`;
+  const url = `${API_BASE}${endpoints.player.stats(playerId)}?x-lang=es`;
   return makeRequest<any>(url, cookie);
+}
+
+export async function placeBid(cookie: string, leagueId: string, offerId: string, bidAmount: number): Promise<ApiResponse<any>> {
+  const url = `${API_BASE}${endpoints.market.makeBid(leagueId, offerId)}?x-lang=es`;
+  return makeRequest<any>(url, cookie, {
+    method: 'POST',
+    body: { money: bidAmount }
+  });
 }
 
 export function analyzeTrend(marketValueData: MarketValuePoint[] | null, days = 5): TrendAnalysis {
@@ -266,24 +207,19 @@ export function analyzeTrend(marketValueData: MarketValuePoint[] | null, days = 
   const changePercent = parseFloat(((change / oldestValue) * 100).toFixed(2));
 
   let trend: TrendAnalysis['trend'] = 'stable';
-  let analysis = '';
-
   if (Math.abs(changePercent) < 2) {
     trend = 'stable';
-    analysis = `Stable price (${changePercent}% change)`;
   } else if (change > 0) {
     trend = 'rising';
-    analysis = `📈 Rising +${changePercent}% (${(change / 1000000).toFixed(1)}M€) in ${days} days`;
   } else {
     trend = 'falling';
-    analysis = `📉 Falling ${changePercent}% (${(change / 1000000).toFixed(1)}M€) in ${days} days`;
   }
 
   return {
     trend,
     change,
     changePercent,
-    analysis,
+    analysis: `${changePercent}% change in ${days} days`,
     latestValue,
     oldestValue,
     dataPoints: sortedData.length,
@@ -344,18 +280,7 @@ export async function analyzePlayer(cookie: string, player: Player | MarketPlaye
     buyoutProtectionHours: null,
   };
 
-  // Generate alerts
-  if (trend5Days.trend === 'falling' && Math.abs(trend5Days.changePercent) > 5) {
-    result.alerts.push(`⚠️ Significant drop in 5 days: ${trend5Days.changePercent}%`);
-  }
-  if (trend5Days.trend === 'rising' && trend5Days.changePercent > 10) {
-    result.alerts.push(`🚀 Strong growth in 5 days: +${trend5Days.changePercent}%`);
-  }
-  if (trend10Days.trend === 'falling' && Math.abs(trend10Days.changePercent) > 10) {
-    result.alerts.push(`📉 Major decline in 10 days: ${trend10Days.changePercent}%`);
-  }
-
-  // Handle sale information and buyout clauses for my players
+  // Calculate time-based data (without UI messages)
   if (isMyPlayer) {
     const myPlayer = player as Player;
     
@@ -366,43 +291,88 @@ export async function analyzePlayer(cookie: string, player: Player | MarketPlaye
       
       result.saleExpirationHours = hoursUntilExpiry;
       result.saleInfo = myPlayer.saleInfo;
-      
-      if (hoursUntilExpiry <= 48 && hoursUntilExpiry > 0) {
-        result.alerts.push(`⏰ Sale expires in ${hoursUntilExpiry}h`);
-      } else if (hoursUntilExpiry <= 168 && hoursUntilExpiry > 0) {
-        const days = Math.ceil(hoursUntilExpiry / 24);
-        result.alerts.push(`⏰ Sale expires in ${days} days`);
-      }
-      
-      result.alerts.push(`💰 Your player is on sale for ${(myPlayer.saleInfo.salePrice / 1000000).toFixed(1)}M€`);
     }
 
     if (myPlayer.buyoutClause) {
       result.buyoutClause = myPlayer.buyoutClause;
-      
-      if (myPlayer.buyoutClause < currentValue * 1.5) {
-        const buyoutValue = (myPlayer.buyoutClause / 1000000).toFixed(1);
-        result.alerts.push(`⚠️ Low buyout clause: ${buyoutValue}M€`);
-      }
 
       if (myPlayer.buyoutClauseLockedEndTime) {
         const protectionEnd = new Date(myPlayer.buyoutClauseLockedEndTime);
         const now = new Date();
         const hoursUntilUnprotected = Math.ceil((protectionEnd.getTime() - now.getTime()) / (1000 * 60 * 60));
-        
         result.buyoutProtectionHours = hoursUntilUnprotected;
-        
-        if (hoursUntilUnprotected <= 0) {
-          result.alerts.push(`🚨 Buyout clause protection has EXPIRED - player can be bought out!`);
-        } else if (hoursUntilUnprotected <= 48) {
-          result.alerts.push(`🔓 Buyout clause protection expires in ${hoursUntilUnprotected}h`);
-        } else if (hoursUntilUnprotected <= 168) {
-          const days = Math.ceil(hoursUntilUnprotected / 24);
-          result.alerts.push(`🔓 Buyout clause protection expires in ${days} days`);
-        }
       }
     }
   }
 
   return result;
+}
+
+// New endpoint functions
+export async function getUserInfo(cookie: string): Promise<ApiResponse<UserInfo>> {
+  const url = `${BASE_URL}${endpoints.user.info}`;
+  return makeRequest<UserInfo>(url, cookie);
+}
+
+export async function getUserLeagues(cookie: string): Promise<ApiResponse<UserLeague[]>> {
+  const url = `${BASE_URL}${endpoints.user.leagues}`;
+  return makeRequest<UserLeague[]>(url, cookie);
+}
+
+export async function getTeamMoney(cookie: string, teamId: string): Promise<ApiResponse<TeamMoney>> {
+  const url = `${BASE_URL}${endpoints.team.money(teamId)}`;
+  return makeRequest<TeamMoney>(url, cookie);
+}
+
+export async function getTeamLineup(cookie: string, teamId: string): Promise<ApiResponse<TeamLineUp>> {
+  const url = `${BASE_URL}${endpoints.team.lineup(teamId)}`;
+  return makeRequest<TeamLineUp>(url, cookie);
+}
+
+export async function getTeamLineupByWeek(cookie: string, teamId: string, weekId: string): Promise<ApiResponse<TeamLineupByWeek>> {
+  const url = `${BASE_URL}${endpoints.team.lineupByWeek(teamId, weekId)}`;
+  return makeRequest<TeamLineupByWeek>(url, cookie);
+}
+
+export async function getLeagueRanking(cookie: string, leagueId: string): Promise<ApiResponse<LeagueRanking[]>> {
+  const url = `${BASE_URL}${endpoints.league.ranking(leagueId)}`;
+  return makeRequest<LeagueRanking[]>(url, cookie);
+}
+
+export async function getLeagueMarketHistory(cookie: string, leagueId: string): Promise<ApiResponse<MarketHistoryEntry[]>> {
+  const url = `${BASE_URL}${endpoints.league.marketHistory(leagueId)}`;
+  return makeRequest<MarketHistoryEntry[]>(url, cookie);
+}
+
+export async function getMarketEvolutionWeek(cookie: string): Promise<ApiResponse<MarketEvolution>> {
+  const url = `${BASE_URL}${endpoints.stats.marketEvolution.week}`;
+  return makeRequest<MarketEvolution>(url, cookie);
+}
+
+export async function getMarketEvolutionMonth(cookie: string): Promise<ApiResponse<MarketEvolution>> {
+  const url = `${BASE_URL}${endpoints.stats.marketEvolution.month}`;
+  return makeRequest<MarketEvolution>(url, cookie);
+}
+
+export async function getMarketEvolutionSeason(cookie: string): Promise<ApiResponse<MarketEvolution>> {
+  const url = `${BASE_URL}${endpoints.stats.marketEvolution.season}`;
+  return makeRequest<MarketEvolution>(url, cookie);
+}
+
+export async function getWeekMatches(cookie: string, weekId: string): Promise<ApiResponse<Match[]>> {
+  const url = `${BASE_URL}${endpoints.stats.weekMatches(weekId)}`;
+  return makeRequest<Match[]>(url, cookie);
+}
+
+export async function makeBidOnOffer(
+  cookie: string, 
+  offerId: string, 
+  leagueId: string, 
+  amount: number
+): Promise<ApiResponse<any>> {
+  const url = `${BASE_URL}${endpoints.market.makeBid(leagueId, offerId)}`;
+  return makeRequest<any>(url, cookie, {
+    method: 'POST',
+    body: { money: amount }
+  });
 }
