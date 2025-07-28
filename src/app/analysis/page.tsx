@@ -9,11 +9,13 @@ import {
   getMyPlayers, 
   getMarketPlayers, 
   getLeagues, 
-  analyzePlayer,
+  analyzePlayer
+} from '@/lib/api';
+import { 
   type PlayerAnalysis,
   type Player,
   type MarketPlayer
-} from '@/lib/api';
+} from '@/types/api';
 import { getAuthToken } from '@/lib/auth';
 import { 
   TrendingUp, 
@@ -82,7 +84,7 @@ function PlayerAnalysisCard({ analysis }: { analysis: PlayerAnalysis }) {
         
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600">Team:</span>
-          <span className="font-medium">{analysis.team}</span>
+          <span className="font-medium text-slate-800">{analysis.team}</span>
         </div>
 
         {/* Trends */}

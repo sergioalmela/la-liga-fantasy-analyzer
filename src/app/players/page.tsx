@@ -5,7 +5,8 @@ import { AuthGuard } from '@/components/auth/auth-guard';
 import { Navbar } from '@/components/layout/navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getMyPlayers, getLeagues, type Player } from '@/lib/api';
+import { getMyPlayers, getLeagues } from '@/lib/api';
+import { type Player } from '@/types/api';
 import { getAuthToken } from '@/lib/auth';
 import { Users, TrendingUp, Euro, Clock, Shield, AlertTriangle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -74,7 +75,7 @@ function PlayerCard({ player }: { player: Player }) {
       <CardContent className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">Team:</span>
-          <span className="font-medium">{player.team?.name || 'Unknown'}</span>
+          <span className="font-medium text-slate-800">{player.team?.name || 'Unknown'}</span>
         </div>
         
         <div className="flex items-center justify-between">
@@ -90,8 +91,9 @@ function PlayerCard({ player }: { player: Player }) {
             <TrendingUp className="w-4 h-4" />
             Points:
           </span>
-          <span className="font-medium">{player.points} ({player.averagePoints.toFixed(1)} avg)</span>
+          <span className="font-medium text-slate-800">{player.points} ({player.averagePoints.toFixed(1)} avg)</span>
         </div>
+
 
         {player.buyoutClause && (
           <div className="border-t pt-3">
@@ -100,7 +102,7 @@ function PlayerCard({ player }: { player: Player }) {
                 <Shield className="w-4 h-4" />
                 Buyout Clause:
               </span>
-              <span className="font-medium">{buyoutClauseFormatted}</span>
+              <span className="font-medium text-slate-800">{buyoutClauseFormatted}</span>
             </div>
             {buyoutStatus && (
               <div className={`text-xs ${buyoutStatus.color} flex items-center gap-1`}>
@@ -183,7 +185,9 @@ export default function PlayersPage() {
 
   const playersOnSale = players.filter(p => p.saleInfo);
   const playersWithLowBuyout = players.filter(p => 
-    p.buyoutClause && p.buyoutClause < p.marketValue * 1.5
+    p.buyoutClause && p.buyoutClause < p.marketValue * 1.2 &&
+      // Ensure buyout clause is not locked or 2 days before expiration
+    (!p.buyoutClauseLockedEndTime || new Date(p.buyoutClauseLockedEndTime).getTime() - new Date().getTime() > 2 * 24 * 60 * 60 * 1000)
   );
   const playersWithExpiringProtection = players.filter(p => {
     if (!p.buyoutClauseLockedEndTime) return false;
