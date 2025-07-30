@@ -130,6 +130,7 @@ export interface PlayerAnalysis {
   id: string;
   name: string;
   isMyPlayer: boolean;
+  playerType?: 'market' | 'other-manager';
   currentValue: number;
   currentValueFormatted: string;
   position: string;
@@ -142,6 +143,7 @@ export interface PlayerAnalysis {
   saleExpirationHours: number | null;
   buyoutProtectionHours: number | null;
   buyoutClause?: number;
+  worthItScore?: number;
   saleInfo?: {
     salePrice: number;
     expirationDate: string;
