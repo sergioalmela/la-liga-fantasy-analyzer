@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { Navbar } from '@/components/layout/navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getMarketPlayers, getLeagues, placeBid } from '@/lib/api';
+import { getMarketPlayers, placeBid } from '@/lib/api';
 import { type MarketPlayer } from '@/types/api';
 import { getAuthToken } from '@/lib/auth';
 import { ShoppingCart, Euro, Clock, Users, TrendingUp, Filter } from 'lucide-react';
@@ -195,7 +196,10 @@ function MarketPlayerCard({
   );
 }
 
-export default function MarketPage() {
+export default function LeagueMarketPage() {
+  const params = useParams();
+  const leagueId = params.leagueId as string;
+  
   const [marketPlayers, setMarketPlayers] = useState<MarketPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -206,7 +210,6 @@ export default function MarketPage() {
   const [bidLoading, setBidLoading] = useState(false);
   const [bidSuccess, setBidSuccess] = useState<string | null>(null);
   const [bidError, setBidError] = useState<string | null>(null);
-  const [leagueId, setLeagueId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadMarketPlayers = async () => {
@@ -214,19 +217,10 @@ export default function MarketPage() {
       if (!token) return;
 
       try {
-        // First get leagues to get the league ID
-        const leaguesResult = await getLeagues(token);
-        if (leaguesResult.error || !leaguesResult.data?.length) {
-          setError('Could not load league information');
-          return;
-        }
-
-        const currentLeagueId = leaguesResult.data[0].id;
         // Remove leading zeros from league ID if present
-        const cleanLeagueId = currentLeagueId.replace(/^0+/, '') || currentLeagueId;
-        setLeagueId(cleanLeagueId);
-        console.log('League ID:', currentLeagueId, '-> Clean:', cleanLeagueId);
-        const result = await getMarketPlayers(token, currentLeagueId);
+        const cleanLeagueId = leagueId.replace(/^0+/, '') || leagueId;
+        console.log('League ID:', leagueId, '-> Clean:', cleanLeagueId);
+        const result = await getMarketPlayers(token, leagueId);
         
         if (result.error) {
           setError(result.error);
@@ -245,7 +239,7 @@ export default function MarketPage() {
     };
 
     loadMarketPlayers();
-  }, []);
+  }, [leagueId]);
 
   const filteredAndSortedPlayers = marketPlayers
     .filter(player => {
@@ -299,7 +293,7 @@ export default function MarketPage() {
     setBidSuccess(null);
 
     try {
-      const result = await placeBid(token, leagueId || '', marketPlayerId, bidValue); // Use amount as entered
+      const result = await placeBid(token, leagueId, marketPlayerId, bidValue); // Use amount as entered
       
       if (result.error) {
         setBidError(result.error);
@@ -308,16 +302,12 @@ export default function MarketPage() {
         setBiddingPlayer(null);
         setBidAmount('');
         // Refresh the market data
-        const leaguesResult = await getLeagues(token);
-        if (leaguesResult.data?.length) {
-          const leagueId = leaguesResult.data[0].id;
-          const marketResult = await getMarketPlayers(token, leagueId);
-          if (marketResult.data) {
-            const ligaOfficialSales = marketResult.data.filter(
-              (player: MarketPlayer) => player.discr === 'marketPlayerLeague'
-            );
-            setMarketPlayers(ligaOfficialSales);
-          }
+        const marketResult = await getMarketPlayers(token, leagueId);
+        if (marketResult.data) {
+          const ligaOfficialSales = marketResult.data.filter(
+            (player: MarketPlayer) => player.discr === 'marketPlayerLeague'
+          );
+          setMarketPlayers(ligaOfficialSales);
         }
       }
     } catch (err) {
@@ -403,7 +393,7 @@ export default function MarketPage() {
               <div className="mb-6 flex flex-wrap gap-4 items-center">
                 <div className="flex items-center gap-2">
                   <Filter className="w-4 h-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">Position:</span>
+                  <span className="text-sm font-medium text-gray-500">Position:</span>
                   <select
                     value={positionFilter || ''}
                     onChange={(e) => setPositionFilter(e.target.value ? Number(e.target.value) : null)}
@@ -418,7 +408,7 @@ export default function MarketPage() {
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">Sort by:</span>
+                  <span className="text-sm font-medium text-gray-500">Sort by:</span>
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
