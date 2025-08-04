@@ -383,7 +383,6 @@ export async function analyzePlayer(cookie: string, player: Player | MarketPlaye
   } else if (!result.isMyPlayer && result.buyoutClause) {
     // Buyout opportunity score for other managers' players (has buyout clause)
     const score = calculateWorthItScore(result);
-    console.log(`Calculated buyout score for ${result.name}: ${score}`);
     (result as any).worthItScore = score;
   } else if (!result.isMyPlayer) {
     // Market value score for market players (no buyout clause)
@@ -393,50 +392,88 @@ export async function analyzePlayer(cookie: string, player: Player | MarketPlaye
   return result;
 }
 
-function calculateWorthItScore(analysis: PlayerAnalysis): number {
+export function calculateWorthItScore(analysis: PlayerAnalysis): number {
   if (!analysis.buyoutClause) return 0;
+  
   
   let score = 0;
   
-  // 1. Value vs Buyout ratio (50% of score) - Most important factor
+  // 1. Value vs Buyout ratio (40% of score) - Most important factor
   const buyoutToValueRatio = analysis.buyoutClause / analysis.currentValue;
-  if (buyoutToValueRatio < 0.8) score += 50; // Excellent deal (buyout < 80% of value)
-  else if (buyoutToValueRatio < 1.0) score += 40; // Great deal (buyout < value)
-  else if (buyoutToValueRatio < 1.2) score += 25; // Good deal (buyout slightly above value)
-  else if (buyoutToValueRatio < 1.5) score += 10; // Fair deal
+  if (buyoutToValueRatio < 0.8) {
+    score += 40;
+  } else if (buyoutToValueRatio < 1.0) {
+    score += 35;
+  } else if (buyoutToValueRatio < 1.2) {
+    score += 20;
+  } else if (buyoutToValueRatio < 1.5) {
+    score += 8;
+  }
   // Above 1.5 ratio gets 0 points (overpriced)
   
-  // 2. Trend analysis (25% of score) - Rising players are much better
+  // 2. Trend analysis (20% of score) - Rising players are much better
   const trend5d = analysis.trends.last5Days.changePercent;
   const trend10d = analysis.trends.last10Days.changePercent;
   
-  if (trend5d > 10 || trend10d > 20) score += 25; // Strong rising trend
-  else if (trend5d > 5 || trend10d > 10) score += 20; // Good rising trend
-  else if (trend5d > 0 || trend10d > 5) score += 15; // Moderate rising trend
-  else if (trend5d > -5 && trend10d > -10) score += 10; // Stable/slight decline
-  else if (trend5d > -10 && trend10d > -20) score += 5; // Declining
+  if (trend5d > 10 || trend10d > 20) {
+    score += 20;
+  } else if (trend5d > 5 || trend10d > 10) {
+    score += 16;
+  } else if (trend5d > 0 || trend10d > 5) {
+    score += 12;
+  } else if (trend5d > -5 && trend10d > -10) {
+    score += 8;
+  } else if (trend5d > -10 && trend10d > -20) {
+    score += 4;
+  }
   // Worse trends get 0 points
   
-  // 3. Protection status (20% of score) - Availability for purchase
+  // 3. Protection status (15% of score) - Base availability scoring
   if (analysis.buyoutProtectionHours !== null) {
-    if (analysis.buyoutProtectionHours <= 0) score += 20; // Available now
-    else if (analysis.buyoutProtectionHours <= 24) score += 18; // Available within 1 day
-    else if (analysis.buyoutProtectionHours <= 72) score += 15; // Available within 3 days
-    else if (analysis.buyoutProtectionHours <= 168) score += 12; // Available within 1 week
-    else score += 5; // Available later
+    if (analysis.buyoutProtectionHours <= 0) {
+      score += 15;
+    } else if (analysis.buyoutProtectionHours <= 24) {
+      score += 13;
+    } else if (analysis.buyoutProtectionHours <= 72) {
+      score += 10;
+    } else if (analysis.buyoutProtectionHours <= 168) {
+      score += 6;
+    } else {
+      score += 2;
+    }
   } else {
-    score += 20; // Assume available
+    score += 15;
   }
   
-  // 4. Player value tier (5% of score) - Slight preference for higher value players
-  if (analysis.currentValue > 50000000) score += 5; // Elite tier
-  else if (analysis.currentValue > 20000000) score += 4; // High tier  
-  else if (analysis.currentValue > 10000000) score += 3; // Mid tier
-  else if (analysis.currentValue > 5000000) score += 2; // Decent tier
-  else score += 1; // Budget tier
+  // 4. URGENT EXPIRATION BONUS (20% of score) - NEW: Heavily prioritize expiring protection
+  if (analysis.buyoutProtectionHours !== null) {
+    if (analysis.buyoutProtectionHours <= 0) {
+      score += 20; // AVAILABLE NOW - highest priority
+    } else if (analysis.buyoutProtectionHours <= 24) {
+      score += 18; // Expires in 1 day - very urgent
+    } else if (analysis.buyoutProtectionHours <= 48) {
+      score += 15; // Expires in 2 days - urgent
+    } else if (analysis.buyoutProtectionHours <= 72) {
+      score += 8; // Expires in 3 days - moderate
+    }
+    // Players with >3 days protection get 0 urgency bonus - not interesting
+  } else {
+    score += 20; // Assume available now
+  }
   
-  // Debug logging
-  console.log(`Score for ${analysis.name}: ${score}/100 (Ratio: ${buyoutToValueRatio.toFixed(2)}, Trend5d: ${trend5d}%, Protection: ${analysis.buyoutProtectionHours}h)`);
+  // 5. Player value tier (5% of score) - Slight preference for higher value players
+  if (analysis.currentValue > 50000000) {
+    score += 5;
+  } else if (analysis.currentValue > 20000000) {
+    score += 4;
+  } else if (analysis.currentValue > 10000000) {
+    score += 3;
+  } else if (analysis.currentValue > 5000000) {
+    score += 2;
+  } else {
+    score += 1;
+  }
+  
   
   return Math.round(score);
 }

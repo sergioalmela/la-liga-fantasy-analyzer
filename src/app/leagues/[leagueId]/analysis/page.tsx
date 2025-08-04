@@ -549,6 +549,13 @@ export default function LeagueAnalysisPage() {
                   const now = new Date();
                   analysis.buyoutProtectionHours = Math.ceil((protectionEnd.getTime() - now.getTime()) / (1000 * 60 * 60));
                 }
+                
+                // Now that we have buyout clause, calculate worthItScore
+                if (analysis.buyoutClause) {
+                  const { calculateWorthItScore } = await import('@/lib/api');
+                  (analysis as any).worthItScore = calculateWorthItScore(analysis);
+                }
+                
                 break;
               }
             }
@@ -563,12 +570,9 @@ export default function LeagueAnalysisPage() {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
-      // Sort by alerts (most alerts first), then by trend change
+      // Sort by worthItScore to prioritize best buyout opportunities
       allAnalyses.sort((a, b) => {
-        if (a.alerts.length !== b.alerts.length) {
-          return b.alerts.length - a.alerts.length;
-        }
-        return Math.abs(b.trends.last5Days.changePercent) - Math.abs(a.trends.last5Days.changePercent);
+        return (b.worthItScore || 0) - (a.worthItScore || 0);
       });
 
       setAnalyses(allAnalyses);
@@ -595,7 +599,7 @@ export default function LeagueAnalysisPage() {
           if (analysis.isMyPlayer || analysis.playerType === 'other-manager') return false;
           break;
         case 'buyout':
-          if (analysis.isMyPlayer || analysis.playerType !== 'other-manager' || !analysis.buyoutClause) return false;
+          if (analysis.isMyPlayer || analysis.playerType !== 'other-manager' || !analysis.buyoutClause || !(analysis as any).worthItScore) return false;
           break;
       }
       
