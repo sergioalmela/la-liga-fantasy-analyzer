@@ -65,6 +65,64 @@ export interface League {
   };
 }
 
+export interface Manager {
+  id: string;
+  managerName: string;
+  avatar: string;
+}
+
+export interface PlayerImages {
+  big: Record<string, string>;
+  beat: Record<string, string>;
+  transparent: Record<string, string>;
+}
+
+export interface PlayerMaster {
+  id: string;
+  name: string;
+  nickname?: string;
+  slug: string;
+  positionId: number;
+  playerStatus: string;
+  lastSeasonPoints: number | null;
+  images: PlayerImages;
+  team: TeamInfo;
+  lastStats: any[];
+  averagePoints: number;
+  points: number;
+  marketValue: number;
+}
+
+export interface PlayerMarket {
+  id: string;
+  salePrice: number;
+  expirationDate: string;
+  numberOfOffers: number;
+  directOffer: boolean;
+}
+
+export interface TeamPlayer {
+  buyoutClause: number;
+  manager: Manager;
+  playerTeamId: string;
+  buyoutClauseLockedEndTime: string;
+  playerMaster: PlayerMaster;
+  playerMarket?: PlayerMarket;
+}
+
+export interface Team {
+  players: TeamPlayer[];
+  loanedPlayers: any[];
+  teamMoney: number;
+  playersNumber: number;
+  id: string;
+  manager: Manager;
+  startingWeek: string;
+  banned: boolean;
+  teamValue: number;
+  teamPoints: number;
+}
+
 export interface Player {
   id: string;
   nickname?: string;
@@ -230,27 +288,6 @@ export interface PlayerPosition {
   };
   buyoutClause: number;
   playerTeamId: string;
-}
-
-export interface PlayerMaster {
-  id: string;
-  name: string;
-  nickname: string;
-  slug: string;
-  positionId: number;
-  position: string;
-  marketValue: number;
-  playerStatus: string;
-  points: number;
-  averagePoints: number;
-  lastSeasonPoints?: number;
-  images: {
-    big: Record<string, string>;
-    beat: Record<string, string>;
-    transparent: Record<string, string>;
-  };
-  team: TeamInfo;
-  lastStats: any[];
 }
 
 export interface TeamInfo {
