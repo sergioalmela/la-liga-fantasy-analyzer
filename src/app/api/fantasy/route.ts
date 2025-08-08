@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+      console.error(`API request failed: ${response.status}`);
     }
 
     const data = await response.json();

@@ -6,16 +6,17 @@ import { AuthGuard } from '@/components/auth/auth-guard';
 import { Navbar } from '@/components/layout/navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { getMyPlayers } from '@/lib/api';
-import { type Player } from '@/types/api';
+import { Player } from '@/entities/player';
 import { getAuthToken } from '@/lib/auth';
 import { Users } from 'lucide-react';
 import { PlayerCard } from '@/components/player/player-card';
 import { formatCurrency } from '@/lib/player-utils';
-
+import {teamService} from "@/services/team-service";
 
 export default function LeaguePlayersPage() {
   const params = useParams();
   const leagueId = params.leagueId as string;
+  const teamId = params.teamId as string;
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,7 +27,7 @@ export default function LeaguePlayersPage() {
       if (!token) return;
 
       try {
-        const result = await getMyPlayers(token, leagueId);
+        const result = await teamService.getPlayers(token, leagueId, teamId);
         
         if (result.error) {
           setError(result.error);

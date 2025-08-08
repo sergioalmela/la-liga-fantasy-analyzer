@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, TrendingUp, Euro, Clock, Shield, AlertTriangle } from 'lucide-react';
-import { type Player } from '@/types/api';
+import { type Player } from '@/entities/player';
 import { 
   getBuyoutClauseStatus, 
   getSaleStatus, 

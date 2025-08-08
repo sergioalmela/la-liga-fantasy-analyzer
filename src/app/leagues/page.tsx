@@ -5,11 +5,11 @@ import { AuthGuard } from '@/components/auth/auth-guard';
 import { Navbar } from '@/components/layout/navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getLeagues } from '@/lib/api';
 import { type League } from '@/types/api';
 import { getAuthToken } from '@/lib/auth';
-import { Trophy, Users, Check, Shield } from 'lucide-react';
+import {Trophy, Users, Check, Shield, Star} from 'lucide-react';
 import Link from 'next/link';
+import {leagueService} from "@/services/league-service";
 
 export default function LeaguesPage() {
   const [leagues, setLeagues] = useState<League[]>([]);
@@ -22,7 +22,7 @@ export default function LeaguesPage() {
       if (!token) return;
 
       try {
-        const result = await getLeagues(token);
+        const result = await leagueService.getLeagues(token);
 
         if (result.error) {
           setError(result.error);
@@ -105,19 +105,19 @@ export default function LeaguesPage() {
                         </div>
 
                         <div className="pt-4 flex gap-2 flex-wrap">
-                          <Link href={`/leagues/${league.id}/players`}>
+                          <Link href={`/leagues/${league.id}/analysis`}>
                             <Button size="sm" variant="primary">
+                              <Star className="w-5 h-5" /> Analysis
+                            </Button>
+                          </Link>
+                          <Link href={`/leagues/${league.id}/${league.team.id}/players`}>
+                            <Button size="sm" variant="outline">
                               My Players
                             </Button>
                           </Link>
                           <Link href={`/leagues/${league.id}/market`}>
                             <Button size="sm" variant="outline">
                               Market
-                            </Button>
-                          </Link>
-                          <Link href={`/leagues/${league.id}/analysis`}>
-                            <Button size="sm" variant="outline">
-                              Analysis
                             </Button>
                           </Link>
                         </div>
