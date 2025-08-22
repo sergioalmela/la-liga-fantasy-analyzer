@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Check } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/utils"
 
 interface CheckboxProps {
   id?: string;

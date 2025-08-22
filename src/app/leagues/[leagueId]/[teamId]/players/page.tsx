@@ -5,13 +5,15 @@ import { useParams } from 'next/navigation';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { Navbar } from '@/components/layout/navbar';
 import { Card, CardContent } from '@/components/ui/card';
-import { getMyPlayers } from '@/lib/api';
 import { Player } from '@/entities/player';
 import { getAuthToken } from '@/lib/auth';
 import { Users } from 'lucide-react';
 import { PlayerCard } from '@/components/player/player-card';
-import { formatCurrency } from '@/lib/player-utils';
 import {teamService} from "@/services/team-service";
+import {PlayerAnalyticsService} from "@/services/player-analytics-service";
+import {formatCurrency} from "@/utils/format-utils";
+import {PlayerSortingUtils} from "@/utils/player-sorting-utils";
+import { BouncingBallLoader } from '@/components/ui/football-loading';
 
 export default function LeaguePlayersPage() {
   const params = useParams();
@@ -44,22 +46,10 @@ export default function LeaguePlayersPage() {
     loadPlayers();
   }, [leagueId]);
 
-  const totalValue = players.reduce((sum, player) => sum + player.marketValue, 0);
-  const totalPoints = players.reduce((sum, player) => sum + player.points, 0);
-  const averagePoints = players.length > 0 ? totalPoints / players.length : 0;
-
-  const playersOnSale = players.filter(p => p.saleInfo);
-  const playersWithLowBuyout = players.filter(p => 
-    p.buyoutClause && p.buyoutClause < p.marketValue * 1.2 &&
-      // Ensure buyout clause is not locked or 2 days before expiration
-    (!p.buyoutClauseLockedEndTime || new Date(p.buyoutClauseLockedEndTime).getTime() - new Date().getTime() > 2 * 24 * 60 * 60 * 1000)
-  );
-  const playersWithExpiringProtection = players.filter(p => {
-    if (!p.buyoutClauseLockedEndTime) return false;
-    const protectionEnd = new Date(p.buyoutClauseLockedEndTime);
-    const hoursLeft = (protectionEnd.getTime() - new Date().getTime()) / (1000 * 60 * 60);
-    return hoursLeft > 0 && hoursLeft <= 48;
-  });
+  const summaryStats = PlayerAnalyticsService.calculateSummaryStats(players);
+  const playersOnSale = PlayerAnalyticsService.getPlayersOnSale(players);
+  const playersWithLowBuyout = PlayerAnalyticsService.getPlayersWithLowBuyout(players);
+  const playersWithExpiringProtection = PlayerAnalyticsService.getPlayersWithExpiringProtection(players);
 
   return (
     <AuthGuard>
@@ -87,21 +77,21 @@ export default function LeaguePlayersPage() {
                 <Card>
                   <CardContent className="p-4">
                     <div className="text-2xl font-bold text-green-600">
-                      {formatCurrency(totalValue)}
+                      {formatCurrency(summaryStats.totalValue)}
                     </div>
                     <p className="text-sm text-gray-600">Squad Value</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4">
-                    <div className="text-2xl font-bold text-purple-600">{totalPoints}</div>
+                    <div className="text-2xl font-bold text-purple-600">{summaryStats.totalPoints}</div>
                     <p className="text-sm text-gray-600">Total Points</p>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-4">
                     <div className="text-2xl font-bold text-orange-600">
-                      {averagePoints.toFixed(1)}
+                      {summaryStats.averagePoints}
                     </div>
                     <p className="text-sm text-gray-600">Avg Points</p>
                   </CardContent>
@@ -148,10 +138,7 @@ export default function LeaguePlayersPage() {
             )}
 
             {loading && (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">Loading players...</p>
-              </div>
+              <BouncingBallLoader message="Loading players..." />
             )}
 
             {error && (
@@ -172,7 +159,7 @@ export default function LeaguePlayersPage() {
 
             {!loading && !error && players.length > 0 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {players.map((player) => (
+                {PlayerSortingUtils.sort(players, 'marketValue', 'desc').map((player) => (
                   <PlayerCard key={player.id} player={player} />
                 ))}
               </div>

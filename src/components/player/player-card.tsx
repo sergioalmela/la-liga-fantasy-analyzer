@@ -1,11 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, TrendingUp, Euro, Clock, Shield, AlertTriangle } from 'lucide-react';
-import { type Player } from '@/entities/player';
+import { TrendingUp, Euro, Clock, Shield, AlertTriangle } from 'lucide-react';
+import { type Player, getPlayerDisplayName, getFormattedMarketValue, getFormattedBuyoutClause, getFormattedSalePrice } from '@/entities/player';
+import { PositionBadge } from '@/components/ui/position-badge';
 import { 
   getBuyoutClauseStatus, 
-  getSaleStatus, 
-  formatCurrency, 
-  getPositionName 
+  getSaleStatus
 } from '@/lib/player-utils';
 
 interface PlayerCardProps {
@@ -13,27 +12,21 @@ interface PlayerCardProps {
 }
 
 export function PlayerCard({ player }: PlayerCardProps) {
-  const marketValueFormatted = formatCurrency(player.marketValue);
-  const buyoutClauseFormatted = player.buyoutClause ? formatCurrency(player.buyoutClause) : null;
-  
   const buyoutStatus = getBuyoutClauseStatus(player);
   const saleStatus = getSaleStatus(player);
-  const positionName = getPositionName(player.positionId);
 
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center justify-between">
-          <span>{player.nickname || player.name}</span>
-          <span className="text-sm font-normal bg-gray-100 px-2 py-1 rounded">
-            {positionName}
-          </span>
+          <span>{getPlayerDisplayName(player)}</span>
+          <PositionBadge player={player} variant="compact" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">Team:</span>
-          <span className="font-medium text-slate-800">{player.team?.name || 'Unknown'}</span>
+          <span className="font-medium text-slate-800">{player.team.name}</span>
         </div>
         
         <div className="flex items-center justify-between">
@@ -41,7 +34,7 @@ export function PlayerCard({ player }: PlayerCardProps) {
             <Euro className="w-4 h-4" />
             Market Value:
           </span>
-          <span className="font-medium text-green-600">{marketValueFormatted}</span>
+          <span className="font-medium text-green-600">{getFormattedMarketValue(player)}</span>
         </div>
         
         <div className="flex items-center justify-between">
@@ -59,7 +52,7 @@ export function PlayerCard({ player }: PlayerCardProps) {
                 <Shield className="w-4 h-4" />
                 Buyout Clause:
               </span>
-              <span className="font-medium text-slate-800">{buyoutClauseFormatted}</span>
+              <span className="font-medium text-slate-800">{getFormattedBuyoutClause(player)}</span>
             </div>
             {buyoutStatus && (
               <div className={`text-xs ${buyoutStatus.color} flex items-center gap-1`}>
@@ -82,7 +75,7 @@ export function PlayerCard({ player }: PlayerCardProps) {
                 On Sale:
               </span>
               <span className="font-medium text-blue-700">
-                {formatCurrency(player.saleInfo.salePrice)}
+                {getFormattedSalePrice(player.saleInfo.salePrice)}
               </span>
             </div>
             {saleStatus && (

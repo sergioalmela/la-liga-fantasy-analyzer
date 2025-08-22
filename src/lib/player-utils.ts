@@ -80,10 +80,6 @@ export function getMarketSaleStatus(player: MarketPlayer): SaleStatus {
   return { status: 'active', message: `Ends ${timeLeft}`, color: 'text-green-600' };
 }
 
-export function formatCurrency(amount: number): string {
-  return `${(amount / 1000000).toFixed(1)}M€`;
-}
-
 export function getPositionName(positionId: number): string {
   return positionNames[positionId as PositionId] || 'Unknown';
 }
