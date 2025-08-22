@@ -1,4 +1,4 @@
-import {ApiResponse, Team} from "@/types/api";
+import {ApiResponse, MarketPlayer, MarketPlayerType, Team} from "@/types/api";
 import {endpoints} from "@/lib/api";
 import {apiClient} from "@/services/api-client";
 import {PlayerMapper} from "@/mappers/player-mapper";
@@ -12,6 +12,27 @@ export class TeamService {
 
         if (result.data) {
             const players = result.data.players.map(PlayerMapper.fromTeamPlayer);
+            return { data: players, error: null };
+        }
+
+        return { data: [], error: result.error };
+    }
+
+    async getOfficialMarketPlayers(cookie: string, leagueId: string): Promise<ApiResponse<Player[]>> {
+        const url = `${endpoints.league.market(leagueId)}?x-lang=es`;
+
+        const result = await apiClient.get<MarketPlayer[]>(url, cookie);
+
+
+
+        if (result.data && Array.isArray(result.data)) {
+            const officialMarketPlayers = result.data.filter(
+                (marketPlayer) => marketPlayer.discr === MarketPlayerType.LEAGUE
+            );
+            
+            const players = officialMarketPlayers.map(marketPlayer => 
+                PlayerMapper.fromMarketPlayer(marketPlayer)
+            );
             return { data: players, error: null };
         }
 

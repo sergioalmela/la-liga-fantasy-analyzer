@@ -145,9 +145,14 @@ export interface Player {
   };
 }
 
+export enum MarketPlayerType {
+  LEAGUE = 'marketPlayerLeague',
+  TEAM = 'marketPlayerTeam'
+}
+
 export interface MarketPlayer {
   id: string;
-  discr: 'marketPlayerLeague' | 'marketPlayerTeam';
+  discr: MarketPlayerType;
   playerMaster: {
     id: string;
     nickname?: string;

@@ -15,7 +15,7 @@ import {formatCurrency} from "@/utils/format-utils";
 import {PlayerSortingUtils} from "@/utils/player-sorting-utils";
 import { BouncingBallLoader } from '@/components/ui/football-loading';
 
-export default function LeaguePlayersPage() {
+export default function TeamPlayersPage() {
   const params = useParams();
   const leagueId = params.leagueId as string;
   const teamId = params.teamId as string;

@@ -1,4 +1,4 @@
-import {TeamPlayer} from "@/types/api";
+import {TeamPlayer, MarketPlayer} from "@/types/api";
 import {Player} from "@/entities/player";
 
 export class PlayerMapper {
@@ -23,6 +23,28 @@ export class PlayerMapper {
                 expirationDate: teamPlayer.playerMarket.expirationDate,
                 numberOfOffers: teamPlayer.playerMarket.numberOfOffers,
             } : undefined,
+        };
+    }
+
+    static fromMarketPlayer(marketPlayer: MarketPlayer): Player {
+        return {
+            id: marketPlayer.playerMaster.id,
+            name: marketPlayer.playerMaster.name,
+            nickname: marketPlayer.playerMaster.nickname,
+            positionId: marketPlayer.playerMaster.positionId,
+            playerStatus: marketPlayer.playerMaster.playerStatus,
+            team: {
+                id: marketPlayer.playerMaster.team.id,
+                name: marketPlayer.playerMaster.team.name,
+            },
+            marketValue: marketPlayer.playerMaster.marketValue,
+            points: marketPlayer.playerMaster.points,
+            averagePoints: marketPlayer.playerMaster.averagePoints,
+            saleInfo: {
+                salePrice: marketPlayer.salePrice,
+                expirationDate: marketPlayer.expirationDate,
+                numberOfOffers: marketPlayer.numberOfBids,
+            },
         };
     }
 }
