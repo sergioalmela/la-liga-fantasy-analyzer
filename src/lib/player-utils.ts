@@ -1,5 +1,6 @@
 import { formatDistanceToNow } from 'date-fns';
 import { type Player, type MarketPlayer } from '@/types/api';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 export const positionNames = {
   1: 'GK',
@@ -94,4 +95,64 @@ export function calculatePriceDifference(salePrice: number, marketValue: number)
     percentDiff,
     isGoodDeal
   };
+}
+
+export interface MomentumDisplay {
+  icon: React.ComponentType<{ className?: string }>;
+  iconColor: string;
+  scoreColor: string;
+  formattedScore: string;
+}
+
+export interface TrendDisplay {
+  value: number;
+  className: string;
+  formattedValue: string;
+}
+
+export function getMomentumDisplay(momentumScore: number): MomentumDisplay {
+  if (momentumScore > 0) {
+    return {
+      icon: TrendingUp,
+      iconColor: 'text-green-600',
+      scoreColor: 'text-green-600',
+      formattedScore: `+${momentumScore}%`
+    };
+  } else if (momentumScore < 0) {
+    return {
+      icon: TrendingDown,
+      iconColor: 'text-red-600',
+      scoreColor: 'text-red-600',
+      formattedScore: `${momentumScore}%`
+    };
+  } else {
+    return {
+      icon: Minus,
+      iconColor: 'text-gray-500',
+      scoreColor: 'text-gray-500',
+      formattedScore: `${momentumScore}%`
+    };
+  }
+}
+
+export function getTrendDisplay(trendValue: number): TrendDisplay {
+  if (trendValue > 0) {
+    return {
+      value: trendValue,
+      className: 'bg-green-100 text-green-700',
+      formattedValue: `+${trendValue}%`
+    };
+  } else if (trendValue < 0) {
+    return {
+      value: trendValue,
+      className: 'bg-red-100 text-red-700',
+      formattedValue: `${trendValue}%`
+    };
+  } else {
+    return {
+      value: trendValue,
+      className: 'bg-gray-100 text-gray-600',
+      formattedValue: `${trendValue}%`
+    };
+  }
 }

@@ -34,6 +34,19 @@ export interface Player {
         expirationDate: string;
         numberOfOffers: number;
     };
+    analysis?: {
+        trends: {
+            last1Days: number;
+            last3Days: number;
+            last7Days: number;
+        };
+        momentumScore: number;
+    };
+    owner?: {
+        id: string;
+        name: string;
+        teamName: string;
+    };
 }
 
 export function getPlayerDisplayName(player: Player): string {
