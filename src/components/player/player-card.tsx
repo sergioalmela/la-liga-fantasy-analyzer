@@ -1,21 +1,35 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, Euro, Clock, Shield, AlertTriangle, Target, User, Shirt } from 'lucide-react';
-import { type Player, getPlayerDisplayName, getFormattedMarketValue, getFormattedBuyoutClause, getFormattedSalePrice } from '@/entities/player';
-import { PositionBadge } from '@/components/ui/position-badge';
-import { 
-  getBuyoutClauseStatus, 
-  getSaleStatus,
+import {
+  AlertTriangle,
+  Clock,
+  Euro,
+  Shield,
+  Shirt,
+  Target,
+  User,
+} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { PositionBadge } from '@/components/ui/position-badge'
+import {
+  getFormattedBuyoutClause,
+  getFormattedMarketValue,
+  getFormattedSalePrice,
+  getPlayerDisplayName,
+  type Player,
+} from '@/entities/player'
+import {
+  getBuyoutClauseStatus,
   getMomentumDisplay,
-  getTrendDisplay
-} from '@/lib/player-utils';
+  getSaleStatus,
+  getTrendDisplay,
+} from '@/lib/player-utils'
 
 interface PlayerCardProps {
-  player: Player;
+  player: Player
 }
 
 export function PlayerCard({ player }: PlayerCardProps) {
-  const buyoutStatus = getBuyoutClauseStatus(player);
-  const saleStatus = getSaleStatus(player);
+  const buyoutStatus = getBuyoutClauseStatus(player)
+  const saleStatus = getSaleStatus(player)
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -33,31 +47,37 @@ export function PlayerCard({ player }: PlayerCardProps) {
           </span>
           <span className="font-medium text-slate-800">{player.team.name}</span>
         </div>
-        
+
         {player.owner && (
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600 flex items-center gap-1">
               <User className="w-4 h-4" />
               Owner:
             </span>
-            <span className="font-medium text-blue-600">{player.owner.name}</span>
+            <span className="font-medium text-blue-600">
+              {player.owner.name}
+            </span>
           </div>
         )}
-        
+
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600 flex items-center gap-1">
             <Euro className="w-4 h-4" />
             Market Value:
           </span>
-          <span className="font-medium text-green-600">{getFormattedMarketValue(player)}</span>
+          <span className="font-medium text-green-600">
+            {getFormattedMarketValue(player)}
+          </span>
         </div>
-        
+
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600 flex items-center gap-1">
             <Target className="w-4 h-4" />
             Points:
           </span>
-          <span className="font-medium text-slate-800">{player.points} ({player.averagePoints.toFixed(1)} avg)</span>
+          <span className="font-medium text-slate-800">
+            {player.points} ({player.averagePoints.toFixed(1)} avg)
+          </span>
         </div>
 
         {player.buyoutClause && (
@@ -67,10 +87,14 @@ export function PlayerCard({ player }: PlayerCardProps) {
                 <Shield className="w-4 h-4" />
                 Buyout Clause:
               </span>
-              <span className="font-medium text-slate-800">{getFormattedBuyoutClause(player)}</span>
+              <span className="font-medium text-slate-800">
+                {getFormattedBuyoutClause(player)}
+              </span>
             </div>
             {buyoutStatus && (
-              <div className={`text-xs ${buyoutStatus.color} flex items-center gap-1`}>
+              <div
+                className={`text-xs ${buyoutStatus.color} flex items-center gap-1`}
+              >
                 {buyoutStatus.status === 'protected' ? (
                   <Shield className="w-3 h-3" />
                 ) : (
@@ -82,40 +106,45 @@ export function PlayerCard({ player }: PlayerCardProps) {
           </div>
         )}
 
-        {player.analysis && (() => {
-          const momentumDisplay = getMomentumDisplay(player.analysis.momentumScore);
-          const trend1d = getTrendDisplay(player.analysis.trends.last1Days);
-          const trend3d = getTrendDisplay(player.analysis.trends.last3Days);
-          const trend7d = getTrendDisplay(player.analysis.trends.last7Days);
-          
-          return (
-            <div className="border-t pt-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-gray-600 flex items-center gap-1">
-                  <momentumDisplay.icon className={`w-4 h-4 ${momentumDisplay.iconColor}`} />
-                  Momentum:
-                </span>
-                <span className={`font-bold ${momentumDisplay.scoreColor}`}>
-                  {momentumDisplay.formattedScore}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-500">Trends (1d/3d/7d):</span>
-                <div className="flex gap-2">
-                  <span className={`px-2 py-1 rounded ${trend1d.className}`}>
-                    {trend1d.formattedValue}
+        {player.analysis &&
+          (() => {
+            const momentumDisplay = getMomentumDisplay(
+              player.analysis.momentumScore
+            )
+            const trend1d = getTrendDisplay(player.analysis.trends.last1Days)
+            const trend3d = getTrendDisplay(player.analysis.trends.last3Days)
+            const trend7d = getTrendDisplay(player.analysis.trends.last7Days)
+
+            return (
+              <div className="border-t pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-600 flex items-center gap-1">
+                    <momentumDisplay.icon
+                      className={`w-4 h-4 ${momentumDisplay.iconColor}`}
+                    />
+                    Momentum:
                   </span>
-                  <span className={`px-2 py-1 rounded ${trend3d.className}`}>
-                    {trend3d.formattedValue}
-                  </span>
-                  <span className={`px-2 py-1 rounded ${trend7d.className}`}>
-                    {trend7d.formattedValue}
+                  <span className={`font-bold ${momentumDisplay.scoreColor}`}>
+                    {momentumDisplay.formattedScore}
                   </span>
                 </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-500">Trends (1d/3d/7d):</span>
+                  <div className="flex gap-2">
+                    <span className={`px-2 py-1 rounded ${trend1d.className}`}>
+                      {trend1d.formattedValue}
+                    </span>
+                    <span className={`px-2 py-1 rounded ${trend3d.className}`}>
+                      {trend3d.formattedValue}
+                    </span>
+                    <span className={`px-2 py-1 rounded ${trend7d.className}`}>
+                      {trend7d.formattedValue}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          );
-        })()}
+            )
+          })()}
 
         {player.saleInfo && (
           <div className="border-t pt-3 bg-blue-50 -mx-6 -mb-6 px-6 pb-6 rounded-b-lg">
@@ -140,5 +169,5 @@ export function PlayerCard({ player }: PlayerCardProps) {
         )}
       </CardContent>
     </Card>
-  );
+  )
 }
