@@ -3,11 +3,11 @@ import { Button } from '@/components/ui/button';
 import { ShoppingCart, Euro, Clock, Users, TrendingUp, AlertTriangle } from 'lucide-react';
 import { type MarketPlayer } from '@/types/api';
 import { 
-  getMarketSaleStatus, 
-  formatCurrency, 
+  getMarketSaleStatus,
   getPositionName,
   calculatePriceDifference 
 } from '@/lib/player-utils';
+import {formatCurrency} from "@/utils/format-utils";
 
 interface MarketPlayerCardProps {
   player: MarketPlayer;

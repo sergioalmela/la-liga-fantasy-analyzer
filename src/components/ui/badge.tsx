@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/ui-utils"
 
 const badgeVariants = {
   default: "border-transparent bg-blue-600 text-white hover:bg-blue-700",

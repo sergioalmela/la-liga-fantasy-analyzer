@@ -54,7 +54,7 @@ export const endpoints = {
   // League endpoints
   league: {
     info: (leagueId: string) => `/v4/leagues/${leagueId}`,
-    team: (teamId: string, leagueId: string) => `/v3/leagues/${leagueId}/teams/${teamId}`,
+    team: (leagueId: string, teamId: string) => `/v3/leagues/${leagueId}/teams/${teamId}`,
     ranking: (leagueId: string) => `/v5/leagues/${leagueId}/ranking`,
     rankingByWeek: (leagueId: string, weekId: number) => `/v5/leagues/${leagueId}/ranking/${weekId}`,
     market: (leagueId: string) => `/v3/league/${leagueId}/market`,
