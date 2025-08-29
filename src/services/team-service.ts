@@ -23,8 +23,6 @@ export class TeamService {
 
         const result = await apiClient.get<MarketPlayer[]>(url, cookie);
 
-
-
         if (result.data && Array.isArray(result.data)) {
             const officialMarketPlayers = result.data.filter(
                 (marketPlayer) => marketPlayer.discr === MarketPlayerType.LEAGUE
