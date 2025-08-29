@@ -10,7 +10,7 @@ import { getAuthToken } from '@/lib/auth';
 import { Users } from 'lucide-react';
 import { PlayerCard } from '@/components/player/player-card';
 import {teamService} from "@/services/team-service";
-import {PlayerAnalyticsService} from "@/services/player-analytics-service";
+import {PlayerAnalyticsService, playerAnalyticsService} from "@/services/player-analytics-service";
 import {formatCurrency} from "@/utils/format-utils";
 import {PlayerSortingUtils} from "@/utils/player-sorting-utils";
 import { BouncingBallLoader } from '@/components/ui/football-loading';
@@ -33,7 +33,8 @@ export default function MarketPlayersPage() {
         if (result.error) {
           setError(result.error);
         } else {
-          setPlayers(result.data || []);
+          const enrichedPlayers = await playerAnalyticsService.enrichPlayersWithAnalysis(token, result.data || []);
+          setPlayers(enrichedPlayers);
         }
       } catch (err) {
         setError('Failed to load players');
@@ -86,7 +87,7 @@ export default function MarketPlayersPage() {
 
               {!loading && !error && players.length > 0 && (
                   <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {PlayerSortingUtils.sort(players, 'marketValue', 'desc').map((player) => (
+                    {PlayerSortingUtils.sortOpportunities(players).map((player) => (
                         <PlayerCard key={player.id} player={player} />
                     ))}
                   </div>

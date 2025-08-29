@@ -10,7 +10,7 @@ import { getAuthToken } from '@/lib/auth';
 import { Users } from 'lucide-react';
 import { PlayerCard } from '@/components/player/player-card';
 import {teamService} from "@/services/team-service";
-import {PlayerAnalyticsService} from "@/services/player-analytics-service";
+import {PlayerAnalyticsService, playerAnalyticsService} from "@/services/player-analytics-service";
 import {formatCurrency} from "@/utils/format-utils";
 import {PlayerSortingUtils} from "@/utils/player-sorting-utils";
 import { BouncingBallLoader } from '@/components/ui/football-loading';
@@ -34,7 +34,8 @@ export default function TeamPlayersPage() {
         if (result.error) {
           setError(result.error);
         } else {
-          setPlayers(result.data || []);
+          const enrichedPlayers = await playerAnalyticsService.enrichPlayersWithAnalysis(token, result.data || []);
+          setPlayers(enrichedPlayers);
         }
       } catch (err) {
         setError('Failed to load players');
@@ -47,7 +48,6 @@ export default function TeamPlayersPage() {
   }, [leagueId]);
 
   const summaryStats = PlayerAnalyticsService.calculateSummaryStats(players);
-  const playersOnSale = PlayerAnalyticsService.getPlayersOnSale(players);
   const playersWithLowBuyout = PlayerAnalyticsService.getPlayersWithLowBuyout(players);
   const playersWithExpiringProtection = PlayerAnalyticsService.getPlayersWithExpiringProtection(players);
 
@@ -100,19 +100,8 @@ export default function TeamPlayersPage() {
             )}
 
             {/* Alerts */}
-            {!loading && !error && (playersOnSale.length > 0 || playersWithLowBuyout.length > 0 || playersWithExpiringProtection.length > 0) && (
+            {!loading && !error && (playersWithLowBuyout.length > 0 || playersWithExpiringProtection.length > 0) && (
               <div className="mb-8 space-y-4">
-                {playersOnSale.length > 0 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-blue-900 mb-2">
-                      Players on Sale ({playersOnSale.length})
-                    </h3>
-                    <div className="text-sm text-blue-700">
-                      {playersOnSale.map(p => p.nickname || p.name).join(', ')}
-                    </div>
-                  </div>
-                )}
-                
                 {playersWithLowBuyout.length > 0 && (
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                     <h3 className="text-sm font-medium text-orange-900 mb-2">

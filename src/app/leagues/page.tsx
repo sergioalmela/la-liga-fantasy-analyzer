@@ -105,9 +105,9 @@ export default function LeaguesPage() {
                         </div>
 
                         <div className="pt-4 flex gap-2 flex-wrap">
-                          <Link href={`/leagues/${league.id}/analysis`}>
+                          <Link href={`/leagues/${league.id}/${league.team.id}/opportunities`}>
                             <Button size="sm" variant="primary">
-                              <Star className="w-5 h-5" /> Analysis
+                              <Star className="w-5 h-5" /> Opportunities
                             </Button>
                           </Link>
                           <Link href={`/leagues/${league.id}/${league.team.id}/players`}>
