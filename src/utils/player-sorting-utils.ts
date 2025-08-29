@@ -12,6 +12,61 @@ export type PlayerSortField =
 export type SortOrder = 'asc' | 'desc';
 
 export class PlayerSortingUtils {
+    /**
+     * Smart sorting for opportunities page - prioritizes best deals
+     * Priority: Low buyout opportunities > High value players > Trending up > Negative trends
+     */
+    static sortOpportunities(players: Player[]): Player[] {
+        return [...players].sort((a, b) => {
+            const scoreA = this.calculateOpportunityScore(a);
+            const scoreB = this.calculateOpportunityScore(b);
+
+            return scoreB - scoreA;
+        });
+    }
+    
+    private static calculateOpportunityScore(player: Player): number {
+        let score = 0;
+        
+        // 1. Low buyout opportunities get massive boost (40 points)
+        if (player.buyoutClause && player.marketValue) {
+            const buyoutRatio = player.buyoutClause / player.marketValue;
+            if (buyoutRatio < 1.2) {
+                score += 40;
+                if (buyoutRatio < 1.0) score += 20;
+            }
+        }
+        
+        // 2. Market value importance (0-20 points, normalized)
+        const normalizedValue = Math.min(player.marketValue / 50000000, 1); // Cap at 50M
+        score += normalizedValue * 20;
+        
+        // 3. Momentum trending (0-15 points)
+        if (player.analysis?.momentumScore) {
+            const momentum = player.analysis.momentumScore;
+            if (momentum > 0) {
+                score += Math.min(momentum * 0.5, 15);
+            } else {
+                score += Math.max(momentum * 0.3, -10);
+            }
+        }
+        
+        // 4. Points performance (0-10 points)
+        const normalizedPoints = Math.min(player.averagePoints / 10, 1);
+        score += normalizedPoints * 10;
+        
+        // 5. Sale urgency bonus (0-5 points)
+        if (player.saleInfo?.expirationDate) {
+            const expirationTime = new Date(player.saleInfo.expirationDate).getTime();
+            const hoursLeft = (expirationTime - new Date().getTime()) / (1000 * 60 * 60);
+            
+            if (hoursLeft <= 12) score += 5;
+            else if (hoursLeft <= 24) score += 3;
+            else if (hoursLeft <= 48) score += 1;
+        }
+        
+        return score;
+    }
     static sort(players: Player[], sortBy: PlayerSortField, order: SortOrder = 'desc'): Player[] {
         const sortedPlayers = [...players];
         
