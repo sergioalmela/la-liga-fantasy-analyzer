@@ -1,92 +1,91 @@
-const uuid = "af88bcff-1157-40a0-b579-030728aacf0b";
-const urlApi = "https://login.laliga.es/laligadspprob2c.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1A_ResourceOwnerv2";
+const uuid = 'af88bcff-1157-40a0-b579-030728aacf0b'
+const urlApi =
+  'https://login.laliga.es/laligadspprob2c.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1A_ResourceOwnerv2'
 
-export interface AuthState {
-  isAuthenticated: boolean;
-  token: string | null;
-}
-
-export async function getToken(email: string, password: string): Promise<string | null> {
+export async function getToken(
+  email: string,
+  password: string
+): Promise<string | null> {
   const data = {
-    grant_type: "password",
+    grant_type: 'password',
     client_id: uuid,
     scope: `openid ${uuid} offline_access`,
-    redirect_uri: "authredirect://com.lfp.laligafantasy",
+    redirect_uri: 'authredirect://com.lfp.laligafantasy',
     username: email,
     password: password,
-    response_type: "id_token",
-  };
+    response_type: 'id_token',
+  }
 
   try {
     const response = await fetch(urlApi, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams(data),
-    });
+    })
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Authentication failed:", errorText);
-      return null;
+      const errorText = await response.text()
+      console.error('Authentication failed:', errorText)
+      return null
     }
 
-    const jsonResponse = await response.json();
-    
+    const jsonResponse = await response.json()
+
     if (!jsonResponse.access_token) {
-      console.error("No access token in response");
-      return null;
+      console.error('No access token in response')
+      return null
     }
 
-    return jsonResponse.access_token.toString();
+    return jsonResponse.access_token.toString()
   } catch (error) {
-    console.error("Error getting token:", error);
-    return null;
+    console.error('Error getting token:', error)
+    return null
   }
 }
 
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') {
-    return null;
+    return null
   }
-  return localStorage.getItem('auth_token');
+  return localStorage.getItem('auth_token')
 }
 
 export function setAuthToken(token: string): void {
   if (typeof window === 'undefined') {
-    return;
+    return
   }
-  localStorage.setItem('auth_token', token);
+  localStorage.setItem('auth_token', token)
 }
 
 export function removeAuthToken(): void {
   if (typeof window === 'undefined') {
-    return;
+    return
   }
-  localStorage.removeItem('auth_token');
+  localStorage.removeItem('auth_token')
 }
 
 export function isTokenExpired(token: string): boolean {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const now = Date.now() / 1000;
-    return payload.exp < now;
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    const now = Date.now() / 1000
+    return payload.exp < now
   } catch (error) {
-    console.error('Error checking token expiration:', error);
-    return true;
+    console.error('Error checking token expiration:', error)
+    return true
   }
 }
 
 export function isAuthenticated(): boolean {
-  const token = getAuthToken();
-  if (!token) return false;
-  
+  const token = getAuthToken()
+  if (!token) return false
+
   if (isTokenExpired(token)) {
-    console.log('Token expired, removing from storage');
-    removeAuthToken();
-    return false;
+    console.log('Token expired, removing from storage')
+    removeAuthToken()
+    return false
   }
-  
-  return true;
+
+  return true
 }

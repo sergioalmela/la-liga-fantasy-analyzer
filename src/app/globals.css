@@ -14,7 +14,6 @@
   --default-transition-timing-function: ease-in-out;
 }
 
-
 /* Dark mode disabled for now - keeping light mode only */
 /* @media (prefers-color-scheme: dark) {
   :root {

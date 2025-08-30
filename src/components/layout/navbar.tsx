@@ -1,24 +1,21 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Users, TrendingUp, Trophy, ShoppingCart, LogOut } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { removeAuthToken } from '@/lib/auth';
-import { useRouter } from 'next/navigation';
+import { LogOut, Trophy } from 'lucide-react'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { removeAuthToken } from '@/lib/auth'
 
-const navigation = [
-  { name: 'Leagues', href: '/leagues', icon: Trophy },
-];
+const navigation = [{ name: 'Leagues', href: '/leagues', icon: Trophy }]
 
 export function Navbar() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const pathname = usePathname()
+  const router = useRouter()
 
   const handleLogout = () => {
-    removeAuthToken();
-    router.push('/login');
-  };
+    removeAuthToken()
+    router.push('/login')
+  }
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200">
@@ -32,7 +29,7 @@ export function Navbar() {
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               {navigation.map((item) => {
-                const Icon = item.icon;
+                const Icon = item.icon
                 return (
                   <Link
                     key={item.name}
@@ -46,7 +43,7 @@ export function Navbar() {
                     <Icon className="w-4 h-4 mr-2" />
                     {item.name}
                   </Link>
-                );
+                )
               })}
             </div>
           </div>
@@ -64,5 +61,5 @@ export function Navbar() {
         </div>
       </div>
     </nav>
-  );
+  )
 }

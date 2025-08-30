@@ -1,46 +1,48 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { setAuthToken, getToken } from '@/lib/auth';
+import { useRouter } from 'next/navigation'
+import { useId, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { getToken, setAuthToken } from '@/lib/auth'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const router = useRouter();
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const router = useRouter()
+  const emailId = useId()
+  const passwordId = useId()
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+    e.preventDefault()
+    setLoading(true)
+    setError('')
 
     try {
       if (!email || !password) {
-        setError('Please complete all fields.');
-        return;
+        setError('Please complete all fields.')
+        return
       }
 
-      // Get token using email/password
-      const token = await getToken(email, password);
-      
+      const token = await getToken(email, password)
+
       if (!token) {
-        setError('Invalid credentials.');
-        return;
+        setError('Invalid credentials.')
+        return
       }
 
-      // Token is valid, save it and redirect
-      setAuthToken(token);
-      router.push('/leagues');
-    } catch (err) {
-      setError('Authentication failed. Please check your credentials and try again.');
+      setAuthToken(token)
+      router.push('/leagues')
+    } catch {
+      setError(
+        'Authentication failed. Please check your credentials and try again.'
+      )
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -53,7 +55,7 @@ export default function LoginPage() {
             Sign in with your La Liga Fantasy credentials
           </p>
         </div>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Login</CardTitle>
@@ -61,12 +63,15 @@ export default function LoginPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor={emailId}
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Email
                 </label>
                 <div className="mt-1">
                   <input
-                    id="email"
+                    id={emailId}
                     name="email"
                     type="email"
                     autoComplete="email"
@@ -80,12 +85,15 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor={passwordId}
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Password
                 </label>
                 <div className="mt-1">
                   <input
-                    id="password"
+                    id={passwordId}
                     name="password"
                     type="password"
                     autoComplete="current-password"
@@ -116,16 +124,19 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-6 p-4 bg-blue-50 rounded-md">
-              <h4 className="text-sm font-medium text-blue-900 mb-2">About this app:</h4>
+              <h4 className="text-sm font-medium text-blue-900 mb-2">
+                About this app:
+              </h4>
               <p className="text-xs text-blue-700">
-                This app uses your La Liga Fantasy credentials to access your team data, 
-                analyze player trends, track market opportunities, and monitor buyout clauses.
-                Your credentials are only used to authenticate with La Liga's official API.
+                This app uses your La Liga Fantasy credentials to access your
+                team data, analyze player trends, track market opportunities,
+                and monitor buyout clauses. Your credentials are only used to
+                authenticate with La Liga's official API.
               </p>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  );
+  )
 }
