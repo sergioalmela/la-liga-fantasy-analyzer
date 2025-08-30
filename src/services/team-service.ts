@@ -1,6 +1,9 @@
 import { Player } from '@/entities/player'
 import { endpoints } from '@/lib/api'
-import { PlayerMapper } from '@/mappers/player-mapper'
+import {
+  mapMarketPlayerToPlayer,
+  mapTeamPlayerToPlayer,
+} from '@/mappers/player-mapper'
 import { apiClient } from '@/services/api-client'
 import { ApiResponse, MarketPlayer, MarketPlayerType, Team } from '@/types/api'
 
@@ -15,7 +18,7 @@ export class TeamService {
     const result = await apiClient.get<Team>(url, cookie)
 
     if (result.data) {
-      const players = result.data.players.map(PlayerMapper.fromTeamPlayer)
+      const players = result.data.players.map(mapTeamPlayerToPlayer)
       return { data: players, error: null }
     }
 
@@ -36,7 +39,7 @@ export class TeamService {
       )
 
       const players = officialMarketPlayers.map((marketPlayer) =>
-        PlayerMapper.fromMarketPlayer(marketPlayer)
+        mapMarketPlayerToPlayer(marketPlayer)
       )
       return { data: players, error: null }
     }

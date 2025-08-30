@@ -16,7 +16,7 @@ import {
 } from '@/services/player-analytics-service'
 import { teamService } from '@/services/team-service'
 import { formatCurrency } from '@/utils/format-utils'
-import { PlayerSortingUtils } from '@/utils/player-sorting-utils'
+import { sortPlayers } from '@/utils/player-sorting-utils'
 
 export default function TeamPlayersPage() {
   const params = useParams()
@@ -52,7 +52,7 @@ export default function TeamPlayersPage() {
     }
 
     loadPlayers()
-  }, [leagueId])
+  }, [leagueId, teamId])
 
   const summaryStats = PlayerAnalyticsService.calculateSummaryStats(players)
   const playersWithLowBuyout =
@@ -167,11 +167,9 @@ export default function TeamPlayersPage() {
 
             {!loading && !error && players.length > 0 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {PlayerSortingUtils.sort(players, 'marketValue', 'desc').map(
-                  (player) => (
-                    <PlayerCard key={player.id} player={player} />
-                  )
-                )}
+                {sortPlayers(players, 'marketValue', 'desc').map((player) => (
+                  <PlayerCard key={player.id} player={player} />
+                ))}
               </div>
             )}
           </div>

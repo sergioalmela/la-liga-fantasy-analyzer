@@ -2,11 +2,6 @@ const uuid = 'af88bcff-1157-40a0-b579-030728aacf0b'
 const urlApi =
   'https://login.laliga.es/laligadspprob2c.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1A_ResourceOwnerv2'
 
-export interface AuthState {
-  isAuthenticated: boolean
-  token: string | null
-}
-
 export async function getToken(
   email: string,
   password: string

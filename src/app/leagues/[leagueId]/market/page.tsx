@@ -11,7 +11,7 @@ import { Player } from '@/entities/player'
 import { getAuthToken } from '@/lib/auth'
 import { playerAnalyticsService } from '@/services/player-analytics-service'
 import { teamService } from '@/services/team-service'
-import { PlayerSortingUtils } from '@/utils/player-sorting-utils'
+import { sortOpportunities } from '@/utils/player-sorting-utils'
 
 export default function MarketPlayersPage() {
   const params = useParams()
@@ -87,7 +87,7 @@ export default function MarketPlayersPage() {
 
             {!loading && !error && players.length > 0 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {PlayerSortingUtils.sortOpportunities(players).map((player) => (
+                {sortOpportunities(players).map((player) => (
                   <PlayerCard key={player.id} player={player} />
                 ))}
               </div>

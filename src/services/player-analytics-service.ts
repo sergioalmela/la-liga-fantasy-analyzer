@@ -101,10 +101,6 @@ export class PlayerAnalyticsService {
     }
   }
 
-  static getPlayersOnSale(players: Player[]): Player[] {
-    return players.filter((p) => p.saleInfo)
-  }
-
   static getPlayersWithLowBuyout(players: Player[]): Player[] {
     return players.filter((player) => {
       if (!player.buyoutClause) return false
@@ -144,17 +140,6 @@ export class PlayerAnalyticsService {
     })
   }
 
-  static getPlayersWithExpiringBuyout(players: Player[]): Player[] {
-    return players.filter((p) => {
-      if (!p.saleInfo?.expirationDate) return false
-      const expirationDate = new Date(p.saleInfo.expirationDate)
-      const hoursLeft =
-        (expirationDate.getTime() - Date.now()) / (1000 * 60 * 60)
-
-      return hoursLeft > 0 && hoursLeft <= 72
-    })
-  }
-
   static getTrendingUpPlayers(
     players: Player[],
     minimumMomentum = 5
@@ -163,16 +148,6 @@ export class PlayerAnalyticsService {
       (p) =>
         p.analysis?.momentumScore && p.analysis.momentumScore > minimumMomentum
     )
-  }
-
-  static getUrgentDeals(players: Player[], hoursThreshold = 12): Player[] {
-    return players.filter((p) => {
-      if (!p.saleInfo?.expirationDate) return false
-      const hoursLeft =
-        (new Date(p.saleInfo.expirationDate).getTime() - Date.now()) /
-        (1000 * 60 * 60)
-      return hoursLeft > 0 && hoursLeft <= hoursThreshold
-    })
   }
 }
 

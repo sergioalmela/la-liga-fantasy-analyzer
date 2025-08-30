@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getToken, setAuthToken } from '@/lib/auth'
@@ -12,6 +12,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const emailId = useId()
+  const passwordId = useId()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,14 +64,14 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label
-                  htmlFor="email"
+                  htmlFor={emailId}
                   className="block text-sm font-medium text-gray-700"
                 >
                   Email
                 </label>
                 <div className="mt-1">
                   <input
-                    id="email"
+                    id={emailId}
                     name="email"
                     type="email"
                     autoComplete="email"
@@ -84,14 +86,14 @@ export default function LoginPage() {
 
               <div>
                 <label
-                  htmlFor="password"
+                  htmlFor={passwordId}
                   className="block text-sm font-medium text-gray-700"
                 >
                   Password
                 </label>
                 <div className="mt-1">
                   <input
-                    id="password"
+                    id={passwordId}
                     name="password"
                     type="password"
                     autoComplete="current-password"

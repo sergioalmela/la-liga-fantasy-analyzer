@@ -53,13 +53,6 @@ export function getPlayerDisplayName(player: Player): string {
   return player.nickname || player.name
 }
 
-export function getPlayerPositionName(player: Player): string {
-  return (
-    PLAYER_POSITIONS[player.positionId as keyof typeof PLAYER_POSITIONS] ||
-    'Unknown'
-  )
-}
-
 export function getPlayerPositionMetadata(player: Player) {
   return (
     POSITION_METADATA[player.positionId as keyof typeof POSITION_METADATA] || {

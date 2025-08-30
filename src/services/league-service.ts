@@ -12,7 +12,7 @@ export class LeagueService {
   ): Promise<ApiResponse<LeagueRanking[]>> {
     const leagueRankingUrl = `${endpoints.league.ranking(leagueId)}?x-lang=es`
 
-    return await apiClient.get<any>(leagueRankingUrl, cookie)
+    return await apiClient.get<LeagueRanking[]>(leagueRankingUrl, cookie)
   }
 }
 

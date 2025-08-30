@@ -16,7 +16,7 @@ import {
   playerAnalyticsService,
 } from '@/services/player-analytics-service'
 import { teamService } from '@/services/team-service'
-import { PlayerSortingUtils } from '@/utils/player-sorting-utils'
+import { sortOpportunities } from '@/utils/player-sorting-utils'
 
 export default function PlayerOpportunitiesPage() {
   const params = useParams()
@@ -194,11 +194,9 @@ export default function PlayerOpportunitiesPage() {
                 )}
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {PlayerSortingUtils.sortOpportunities(opponentPlayers).map(
-                    (player) => (
-                      <PlayerCard key={player.id} player={player} />
-                    )
-                  )}
+                  {sortOpportunities(opponentPlayers).map((player) => (
+                    <PlayerCard key={player.id} player={player} />
+                  ))}
                 </div>
               </div>
             )}

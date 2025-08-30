@@ -60,7 +60,7 @@ export class ApiClient {
     cookie: string,
     options: {
       method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
-      body?: any
+      body?: unknown
     } = {}
   ): Promise<ApiResponse<T>> {
     try {
@@ -72,7 +72,7 @@ export class ApiClient {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${cookie}`,
           },
-          ...(options.body && { body: JSON.stringify(options.body) }),
+          ...(options.body ? { body: JSON.stringify(options.body) } : {}),
         }
       )
 
@@ -101,7 +101,7 @@ export class ApiClient {
   async post<T>(
     endpoint: string,
     cookie: string,
-    body?: any
+    body?: unknown
   ): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(endpoint, cookie, { method: 'POST', body })
   }
