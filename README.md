@@ -1,128 +1,200 @@
-# La Liga Fantasy Market Analyzer
+# ⚽ La Liga Fantasy Analyzer
 
-A Next.js application for analyzing your La Liga Fantasy football team, tracking player market trends, monitoring buyout clauses, and finding the best transfer opportunities.
+## 🇬🇧 English
 
-## Features
+A comprehensive analytics tool designed for La Liga Fantasy football managers who want to gain a competitive edge. This modern web application provides deep market intelligence, advanced player analysis, and smart transfer opportunity detection to help you build the ultimate fantasy team.
 
-- **Authentication**: Login with your La Liga Fantasy credentials
-- **Leagues Dashboard**: View your fantasy leagues and teams
-- **My Players**: Monitor your current squad with detailed information including:
-  - Market values and trends
-  - Buyout clause status and protection expiration
-  - Players on sale with expiration alerts
-  - Points and performance statistics
-- **Transfer Market**: Browse available players with:
-  - Price comparison (market value vs sale price)
-  - Good deal identification
-  - Sale expiration tracking
-  - Position and performance filtering
-- **Player Analysis**: Deep analysis with:
-  - 5-day and 10-day price trends
-  - Automated alerts for price changes
-  - Buyout clause expiration warnings
-  - CSV export functionality
+**Key Benefits:**
+- 📊 **Smart Analytics**: Multi-timeframe trend analysis and momentum scoring
+- 🎯 **Transfer Intelligence**: Discover undervalued players with expiring protection periods
+- 🔒 **Privacy-First**: All data processing happens client-side - your credentials never leave your browser
+- ⚡ **Real-Time Data**: Live market values and player statistics
 
-## Tech Stack
+## 🇪🇸 Español
 
-- Next.js 15 with React 19
-- TypeScript
-- Tailwind CSS
-- La Liga Fantasy API integration
+Una herramienta de análisis integral diseñada para managers de La Liga Fantasy que buscan obtener una ventaja competitiva. Esta moderna aplicación web proporciona inteligencia de mercado profunda, análisis avanzado de jugadores y detección inteligente de oportunidades de traspaso para ayudarte a construir el equipo fantasy definitivo.
 
-## Getting Started
+**Beneficios Clave:**
+- 📊 **Análisis Inteligente**: Análisis de tendencias multi-temporales y puntuación de momentum
+- 🎯 **Inteligencia de Traspasos**: Descubre jugadores infravalorados con períodos de protección próximos a expirar
+- 🔒 **Privacidad Primero**: Todo el procesamiento de datos ocurre en el cliente - tus credenciales nunca salen de tu navegador
+- ⚡ **Datos en Tiempo Real**: Valores de mercado en vivo y estadísticas de jugadores
+
+<img src="./screenshot.png" alt="La Liga Fantasy Analyzer" width="600">
+
+## 🚀 Features
+
+### 🔐 Authentication & Security
+- Secure authentication with La Liga Fantasy credentials
+- JWT token management with automatic expiration handling
+- Client-side processing - no data stored externally
+- Authentication guards protecting all routes
+
+### 📊 Advanced Player Analytics
+- **Multi-timeframe Trends**: Track 1, 3, and 7-day market value changes
+- **Momentum Scoring**: Proprietary algorithm analyzing player value trajectories
+- **Performance Metrics**: Points, averages, and trend analysis
+- **Opportunity Detection**: Smart algorithms to identify undervalued players
+
+### 🎯 Market Intelligence
+- **Transfer Opportunities**: Find players from other managers with:
+    - Low buyout clauses (< 120% market value)
+    - Expiring protection periods
+    - Upward trending performance
+    - Smart opportunity scoring
+- **Official Market**: Browse players sold directly by La Liga teams
+- **Squad Management**: Monitor your current players with alerts for:
+    - Buyout clause protection expiration
+    - Market value changes
+    - Players on sale with time tracking
+
+### 🏆 League Management
+- Multi-league dashboard with quick access
+- League statistics and team overview
+- Cross-league player comparison
+
+## 🏃‍♂️ Getting Started
 
 ### Prerequisites
-
 - Node.js 18+ and pnpm
-- A La Liga Fantasy account
+- La Liga Fantasy account
 
 ### Installation
 
-1. Clone the repository:
+1. **Clone the repository**:
 ```bash
-git clone <repository-url>
-cd liga-fantasy-market-analyzer
+git clone https://github.com/sergioalmela/liga-fantasy-market-analyzer.git
+cd la-liga-fantasy-analyzer
 ```
 
-2. Install dependencies:
+2. **Install dependencies**:
 ```bash
 pnpm install
 ```
 
-3. Create a `.env.local` file (optional):
-```bash
-cp .env.example .env.local
-```
-
-4. Run the development server:
+3. **Start development server**:
 ```bash
 pnpm dev
 ```
 
-5. Open [http://localhost:3000](http://localhost:3000) in your browser
+4. **Open your browser**:
+   Navigate to [http://localhost:3000](http://localhost:3000)
 
 ### Usage
 
-1. **Login**: Use your La Liga Fantasy email and password to authenticate
-2. **View Leagues**: See your fantasy leagues and teams
-3. **Check Players**: Monitor your squad's market values and alerts
-4. **Browse Market**: Find transfer opportunities and good deals
-5. **Run Analysis**: Get detailed trends and export data
+1. **Login** with your La Liga Fantasy credentials
+2. **Select your league** from the dashboard
+3. **Analyze opportunities** to find undervalued players
+4. **Monitor your squad** with trend analysis
+5. **Browse the market** for direct purchases
 
-## API Integration
+---
 
-The app integrates with La Liga Fantasy's official API:
-- Authentication: `https://login.laliga.es/...`
-- Fantasy Data: `https://api-fantasy.llt-services.com/api/...`
+## 🛠️ Technical Information
 
-All API calls are made client-side using your authenticated session.
+### Technology Stack
 
-## Key Features Explained
+#### Core Framework
+- **Next.js 15** - Latest version with App Router and Turbopack
+- **React 19** - Latest React features and optimizations
+- **TypeScript 5** - Full type safety with strict configuration
 
-### Player Analysis
-- **Price Trends**: Tracks 5-day and 10-day market value changes
-- **Alerts**: Automated notifications for significant price changes
-- **Buyout Monitoring**: Tracks buyout clause protection expiration
-- **Export**: CSV export for external analysis
+#### Architecture
+- **Clean Layered Architecture** - Separation of concerns with:
+    - Domain entities and business logic
+    - Service layer for API integration
+    - Presentation layer with reusable components
+    - Infrastructure utilities and mappers
 
-### Market Intelligence
-- **Good Deals**: Identifies players selling below market value
-- **Expiration Tracking**: Shows when sales expire
-- **Performance Metrics**: Points and averages for informed decisions
+#### Styling & UI
+- **Tailwind CSS 4** - Modern utility-first styling
+- **Lucide React** - Beautiful icon library
+- **Custom UI Components** - Consistent design system
+- **Responsive Design** - Mobile-first approach
 
-### Security
-- Credentials are only used for API authentication
-- No data is stored on external servers
-- All processing happens in your browser
-
-## Development
+#### Code Quality
+- **Biome** - Modern linter and formatter
+- **Strict TypeScript** - Comprehensive type checking
 
 ### Project Structure
+
 ```
 src/
-├── app/                 # Next.js app router pages
-├── components/          # Reusable UI components
-├── lib/                # Utilities and API functions
-└── ...
+├── app/                    # Next.js app router pages
+│   ├── leagues/           # League-specific routes
+│   ├── login/             # Authentication
+│   └── api/               # API proxy routes
+├── components/            # Reusable UI components
+│   ├── auth/              # Authentication components
+│   ├── layout/            # Layout components
+│   ├── player/            # Player-specific components
+│   └── ui/                # Base UI components
+├── entities/              # Domain models
+├── services/              # Business logic layer
+├── mappers/               # Data transformation
+├── utils/                 # Utility functions
+└── lib/                   # Core utilities and API
 ```
 
-### Building for Production
+### Development
+
+#### Available Scripts
+
+- `pnpm dev` - Start development server with Turbopack
+- `pnpm build` - Build for production
+- `pnpm start` - Start production server
+- `pnpm lint` - Run Biome linter and formatter
+
+#### API Integration
+
+The application integrates with La Liga Fantasy through:
+- **Authentication**: OAuth2 flow with JWT tokens
+- **Data Fetching**: RESTful API calls for players, leagues, and market data
+- **Proxy Layer**: Next.js API routes for secure communication
+- **Real-time Updates**: Live market values and player statistics
+
+### Analytics Algorithm
+
+#### Opportunity Scoring
+Our proprietary algorithm evaluates players based on:
+
+1. **Buyout Opportunities** (40+ points): Players with low buyout clauses
+2. **Market Value** (0-20 points): Normalized player value importance
+3. **Momentum Trends** (±15 points): Recent performance trajectory
+4. **Points Performance** (0-10 points): Statistical performance
+5. **Sale Urgency** (0-5 points): Time-sensitive opportunities
+
+#### Trend Analysis
+- Multi-timeframe price tracking (1d, 3d, 7d)
+- Momentum calculation with weighted scoring
+- Performance correlation with market movements
+
+### Deployment
+
+#### Building for Production
 ```bash
 pnpm build
 pnpm start
 ```
 
-## Contributing
+The application can be deployed to any platform supporting Next.js:
+- Vercel (recommended)
+- Netlify
+- Railway
+- Self-hosted
+
+### Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
 
-## License
+## ⚠️ Disclaimer
 
-This project is for educational purposes. Please respect La Liga Fantasy's terms of service.
+This is an unofficial tool created for educational and analytical purposes. It is not affiliated with La Liga or their fantasy platform. Please respect La Liga Fantasy's terms of service when using this application.
 
-## Disclaimer
+---
 
-This is an unofficial tool created for personal use. It is not affiliated with La Liga or their fantasy platform.
+**Happy analyzing! ⚽📈**
