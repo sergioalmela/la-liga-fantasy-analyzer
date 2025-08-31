@@ -12,9 +12,9 @@ A comprehensive analytics tool designed for La Liga Fantasy football managers wh
 
 ## 🇪🇸 Español
 
-Una herramienta de análisis integral diseñada para managers de La Liga Fantasy que buscan obtener una ventaja competitiva. Esta moderna aplicación web proporciona inteligencia de mercado profunda, análisis avanzado de jugadores y detección inteligente de oportunidades de traspaso para ayudarte a construir el equipo fantasy definitivo.
+Una herramienta de análisis integral diseñada para managers de La Liga Fantasy que buscan obtener una ventaja competitiva. Esta moderna aplicación web proporciona análisis del mercado, de tus propios jugadores y los de otros mánager para ayudarte a construir el equipo fantasy definitivo.
 
-**Beneficios Clave:**
+**Características Clave:**
 - 📊 **Análisis Inteligente**: Análisis de tendencias multi-temporales y puntuación de momentum
 - 🎯 **Inteligencia de Traspasos**: Descubre jugadores infravalorados con períodos de protección próximos a expirar
 - 🔒 **Privacidad Primero**: Todo el procesamiento de datos ocurre en el cliente - tus credenciales nunca salen de tu navegador
