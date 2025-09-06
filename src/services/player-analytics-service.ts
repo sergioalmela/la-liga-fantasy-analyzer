@@ -128,9 +128,6 @@ export class PlayerAnalyticsService {
 
   static getPlayersWithExpiringProtection(players: Player[]): Player[] {
     return players.filter((p) => {
-      console.log(p.nickname)
-      console.log(p.buyoutClauseLockedEndTime)
-      console.log(p.saleInfo?.expirationDate)
       if (!p.buyoutClauseLockedEndTime) return false
       const protectionEnd = new Date(p.buyoutClauseLockedEndTime)
       const hoursLeft =

@@ -42,12 +42,6 @@ export async function POST(request: NextRequest) {
   // Remove the duplicate /api part since it's already in API_BASE_URL
   const cleanPath = path.startsWith('/api') ? path.substring(4) : path
 
-  console.log('=== POST REQUEST DEBUG ===')
-  console.log('Full URL:', `${API_BASE_URL}${cleanPath}`)
-  console.log('Request Body:', JSON.stringify(body, null, 2))
-  console.log('Auth Header:', authHeader ? 'Present' : 'Missing')
-  console.log('========================')
-
   try {
     const response = await fetch(`${API_BASE_URL}${cleanPath}`, {
       method: 'POST',
