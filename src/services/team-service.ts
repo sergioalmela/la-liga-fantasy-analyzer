@@ -1,10 +1,9 @@
 import { Player } from '@/entities/player'
-import { endpoints } from '@/lib/api'
 import {
   mapMarketPlayerToPlayer,
   mapTeamPlayerToPlayer,
 } from '@/mappers/player-mapper'
-import { apiClient } from '@/services/api-client'
+import { apiClient, endpoints } from '@/services/api-client'
 import { ApiResponse, MarketPlayer, MarketPlayerType, Team } from '@/types/api'
 
 export class TeamService {
@@ -13,7 +12,7 @@ export class TeamService {
     leagueId: string,
     teamId: string
   ): Promise<ApiResponse<Player[]>> {
-    const url = `${endpoints.league.team(leagueId, teamId)}?x-lang=es`
+    const url = `${endpoints.league.team(teamId, leagueId)}?x-lang=es`
 
     const result = await apiClient.get<Team>(url, cookie)
 

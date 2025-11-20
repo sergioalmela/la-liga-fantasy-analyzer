@@ -41,6 +41,10 @@ export const endpoints = {
   market: {
     makeBid: (leagueId: string, offerId: string) =>
       `/v3/league/${leagueId}/market/${offerId}/bid`,
+    sellPlayer: (leagueId: string) =>
+      `/v3/league/${leagueId}/market/sell?x-lang=es`,
+    withdrawPlayer: (leagueId: string, marketId: string) =>
+      `/v3/league/${leagueId}/market/${marketId}/delete?x-lang=es`,
   },
 
   // Stats endpoints
@@ -104,6 +108,10 @@ export class ApiClient {
     body?: unknown
   ): Promise<ApiResponse<T>> {
     return this.makeRequest<T>(endpoint, cookie, { method: 'POST', body })
+  }
+
+  async delete<T>(endpoint: string, cookie: string): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(endpoint, cookie, { method: 'DELETE' })
   }
 }
 
