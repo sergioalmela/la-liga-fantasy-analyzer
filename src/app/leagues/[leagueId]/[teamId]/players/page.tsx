@@ -11,11 +11,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
 import { getAuthToken } from '@/lib/auth'
+import { marketService } from '@/services/market-service'
 import {
   PlayerAnalyticsService,
   playerAnalyticsService,
 } from '@/services/player-analytics-service'
-import { marketService } from '@/services/market-service'
 import { teamService } from '@/services/team-service'
 import { formatCurrency } from '@/utils/format-utils'
 import { sortPlayers } from '@/utils/player-sorting-utils'
@@ -87,11 +87,14 @@ export default function TeamPlayersPage() {
         const playerName = player.nickname || player.name
 
         try {
+          // Ensure player has sale info (should always be true in this loop)
+          if (!player.saleInfo) continue
+
           // Step 1: Withdraw player from market
           const withdrawResult = await marketService.withdrawPlayer(
             token,
             leagueId,
-            player.saleInfo!.marketId
+            player.saleInfo.marketId
           )
 
           if (withdrawResult.error) {
@@ -110,7 +113,7 @@ export default function TeamPlayersPage() {
             token,
             leagueId,
             playerIdToSell,
-            player.saleInfo!.salePrice
+            player.saleInfo.salePrice
           )
 
           if (sellResult.error) {
@@ -169,7 +172,11 @@ export default function TeamPlayersPage() {
       setRemarketMessage(message)
 
       // Reload players to reflect changes
-      const updatedResult = await teamService.getPlayers(token, leagueId, teamId)
+      const updatedResult = await teamService.getPlayers(
+        token,
+        leagueId,
+        teamId
+      )
       if (updatedResult.data) {
         const enrichedPlayers =
           await playerAnalyticsService.enrichPlayersWithAnalysis(

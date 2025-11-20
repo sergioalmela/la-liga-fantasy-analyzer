@@ -41,11 +41,13 @@ export class MarketService {
       marketId: string
       salePrice: number
     }>
-  ): Promise<ApiResponse<{
-    withdrawn: number
-    resold: number
-    failed: Array<{ playerId: string; error: string }>
-  }>> {
+  ): Promise<
+    ApiResponse<{
+      withdrawn: number
+      resold: number
+      failed: Array<{ playerId: string; error: string }>
+    }>
+  > {
     const results = {
       withdrawn: 0,
       resold: 0,
