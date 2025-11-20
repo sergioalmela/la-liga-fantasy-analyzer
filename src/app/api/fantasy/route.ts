@@ -72,3 +72,43 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Failed to post data' }, { status: 500 })
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url)
+  const path = searchParams.get('path') || ''
+
+  const authHeader = request.headers.get('authorization')
+
+  // Remove the duplicate /api part since it's already in API_BASE_URL
+  const cleanPath = path.startsWith('/api') ? path.substring(4) : path
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${cleanPath}`, {
+      method: 'DELETE',
+      headers: {
+        Accept: 'application/json',
+        'x-lang': 'es',
+        ...(authHeader && { Authorization: authHeader }),
+      },
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(
+        `API DELETE request failed: ${response.status} - ${errorText}`
+      )
+      return Response.json(
+        { error: `API request failed: ${response.status}` },
+        { status: response.status }
+      )
+    }
+
+    // Check if response has content before parsing JSON
+    const text = await response.text()
+    const data = text ? JSON.parse(text) : { success: true }
+    return NextResponse.json(data)
+  } catch (error) {
+    console.error('API DELETE proxy error:', error)
+    return Response.json({ error: 'Failed to delete data' }, { status: 500 })
+  }
+}

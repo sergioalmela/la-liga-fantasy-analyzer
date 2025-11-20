@@ -16,6 +16,7 @@ export const POSITION_METADATA = {
 
 export interface Player {
   id: string
+  playerTeamId?: string
   name: string
   nickname?: string
   positionId: number
@@ -30,6 +31,7 @@ export interface Player {
   buyoutClause?: number
   buyoutClauseLockedEndTime?: string
   saleInfo?: {
+    marketId: string
     salePrice: number
     expirationDate: string
     numberOfOffers: number
