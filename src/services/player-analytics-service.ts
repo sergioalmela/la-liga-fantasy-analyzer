@@ -114,7 +114,7 @@ export class PlayerAnalyticsService {
     })
   }
 
-  private static isProtectionExpiringSoon(player: Player): boolean {
+  static isProtectionExpiringSoon(player: Player): boolean {
     if (!player.buyoutClauseLockedEndTime) return true
 
     const protectionEndTime = new Date(
