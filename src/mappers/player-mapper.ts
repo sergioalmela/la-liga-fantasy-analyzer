@@ -4,6 +4,7 @@ import { MarketPlayer, TeamPlayer } from '@/types/api'
 export function mapTeamPlayerToPlayer(teamPlayer: TeamPlayer): Player {
   return {
     id: teamPlayer.playerMaster.id,
+    playerTeamId: teamPlayer.playerTeamId,
     name: teamPlayer.playerMaster.name,
     nickname: teamPlayer.playerMaster.nickname,
     positionId: teamPlayer.playerMaster.positionId,
@@ -19,6 +20,7 @@ export function mapTeamPlayerToPlayer(teamPlayer: TeamPlayer): Player {
     buyoutClauseLockedEndTime: teamPlayer.buyoutClauseLockedEndTime,
     saleInfo: teamPlayer.playerMarket
       ? {
+          marketId: teamPlayer.playerMarket.id,
           salePrice: teamPlayer.playerMarket.salePrice,
           expirationDate: teamPlayer.playerMarket.expirationDate,
           numberOfOffers: teamPlayer.playerMarket.numberOfOffers,
@@ -42,6 +44,7 @@ export function mapMarketPlayerToPlayer(marketPlayer: MarketPlayer): Player {
     points: marketPlayer.playerMaster.points,
     averagePoints: marketPlayer.playerMaster.averagePoints,
     saleInfo: {
+      marketId: marketPlayer.id,
       salePrice: marketPlayer.salePrice,
       expirationDate: marketPlayer.expirationDate,
       numberOfOffers: marketPlayer.numberOfBids,
