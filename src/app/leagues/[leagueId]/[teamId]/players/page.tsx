@@ -87,7 +87,6 @@ export default function TeamPlayersPage() {
         const playerName = player.nickname || player.name
 
         try {
-          // Ensure player has sale info (should always be true in this loop)
           if (!player.saleInfo) continue
 
           // Step 1: Withdraw player from market
@@ -113,7 +112,7 @@ export default function TeamPlayersPage() {
             token,
             leagueId,
             playerIdToSell,
-            player.saleInfo.salePrice
+            player.marketValue
           )
 
           if (sellResult.error) {
