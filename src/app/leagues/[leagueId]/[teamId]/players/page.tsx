@@ -223,7 +223,7 @@ export default function TeamPlayersPage() {
                   disabled={
                     remarketingAll ||
                     loading ||
-                    players.filter((p) => p.saleInfo).length === 0
+                    players.length === 0
                   }
                   className="flex items-center gap-2"
                 >
