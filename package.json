@@ -9,16 +9,15 @@
     "lint": "biome check --write"
   },
   "dependencies": {
-    "@types/dotenv": "^8.2.3",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.3",
-    "lucide-react": "^0.561.0",
-    "next": "15.5.9",
+    "lucide-react": "^0.562.0",
+    "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.3.9",
+    "@biomejs/biome": "2.3.11",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^25",
     "@types/react": "^19",
