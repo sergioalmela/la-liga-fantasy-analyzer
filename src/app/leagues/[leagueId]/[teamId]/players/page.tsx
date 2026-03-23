@@ -220,11 +220,7 @@ export default function TeamPlayersPage() {
                 </div>
                 <Button
                   onClick={handleRemarketAll}
-                  disabled={
-                    remarketingAll ||
-                    loading ||
-                    players.length === 0
-                  }
+                  disabled={remarketingAll || loading || players.length === 0}
                   className="flex items-center gap-2"
                 >
                   <RefreshCw
