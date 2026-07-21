@@ -13,7 +13,7 @@ export type SortOrder = 'asc' | 'desc'
 
 /**
  * Smart sorting for opportunities page - prioritizes best deals
- * Priority: Low buyout opportunities > High value players > Trending up > Negative trends
+ * Priority: Low buyouts > High value > Points performance > Sale urgency
  */
 export function sortOpportunities(players: Player[]): Player[] {
   return [...players].sort((a, b) => {
@@ -40,21 +40,11 @@ function calculateOpportunityScore(player: Player): number {
   const normalizedValue = Math.min(player.marketValue / 50000000, 1) // Cap at 50M
   score += normalizedValue * 20
 
-  // 3. Momentum trending (0-15 points)
-  if (player.analysis?.momentumScore) {
-    const momentum = player.analysis.momentumScore
-    if (momentum > 0) {
-      score += Math.min(momentum * 0.5, 15)
-    } else {
-      score += Math.max(momentum * 0.3, -10)
-    }
-  }
-
-  // 4. Points performance (0-10 points)
+  // 3. Points performance (0-10 points)
   const normalizedPoints = Math.min(player.averagePoints / 10, 1)
   score += normalizedPoints * 10
 
-  // 5. Sale urgency bonus (0-5 points)
+  // 4. Sale urgency bonus (0-5 points)
   if (player.saleInfo?.expirationDate) {
     const expirationTime = new Date(player.saleInfo.expirationDate).getTime()
     const hoursLeft = (expirationTime - Date.now()) / (1000 * 60 * 60)

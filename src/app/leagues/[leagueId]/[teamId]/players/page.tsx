@@ -10,196 +10,108 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
-import { getAuthToken } from '@/lib/auth'
-import { marketService } from '@/services/market-service'
+import { useLanguage } from '@/i18n/language-provider'
+import { refreshMarketListings } from '@/services/market-service'
 import {
-  PlayerAnalyticsService,
-  playerAnalyticsService,
+  calculateSummaryStats,
+  getPlayersWithExpiringProtection,
+  getPlayersWithLowBuyout,
 } from '@/services/player-analytics-service'
 import { teamService } from '@/services/team-service'
 import { formatCurrency } from '@/utils/format-utils'
 import { sortPlayers } from '@/utils/player-sorting-utils'
 
 export default function TeamPlayersPage() {
+  const { t } = useLanguage()
   const params = useParams()
   const leagueId = params.leagueId as string
   const teamId = params.teamId as string
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [remarketingAll, setRemarketingAll] = useState(false)
-  const [remarketMessage, setRemarketMessage] = useState('')
+  const [refreshingMarket, setRefreshingMarket] = useState(false)
+  const [marketStatus, setMarketStatus] = useState<{
+    tone: 'progress' | 'success' | 'warning' | 'error'
+    message: string
+    failures?: string[]
+  } | null>(null)
 
   useEffect(() => {
     const loadPlayers = async () => {
-      const token = getAuthToken()
-      if (!token) return
-
       try {
-        const result = await teamService.getPlayers(token, leagueId, teamId)
+        const result = await teamService.getPlayers(leagueId, teamId)
 
         if (result.error) {
-          setError(result.error)
+          setError(t('players.loadError'))
         } else {
-          const enrichedPlayers =
-            await playerAnalyticsService.enrichPlayersWithAnalysis(
-              token,
-              result.data || []
-            )
-          setPlayers(enrichedPlayers)
+          setPlayers(result.data || [])
         }
       } catch {
-        setError('Failed to load players')
+        setError(t('players.loadError'))
       } finally {
         setLoading(false)
       }
     }
 
     loadPlayers()
-  }, [leagueId, teamId])
+  }, [leagueId, t, teamId])
 
-  const handleRemarketAll = async () => {
-    const token = getAuthToken()
-    if (!token) return
+  const handleRefreshMarket = async () => {
+    if (players.length === 0 || refreshingMarket) return
 
-    const playersInMarket = players.filter((p) => p.saleInfo)
-    const playersNotInMarket = players.filter((p) => !p.saleInfo)
+    const listedPlayers = players.filter((player) => player.saleInfo)
+    const unlistedPlayers = players.length - listedPlayers.length
+    const confirmed = window.confirm(
+      t('market.confirm', {
+        listed: listedPlayers.length,
+        unlisted: unlistedPlayers,
+      })
+    )
+    if (!confirmed) return
 
-    if (players.length === 0) {
-      setRemarketMessage('No players found.')
-      setTimeout(() => setRemarketMessage(''), 3000)
-      return
-    }
+    setRefreshingMarket(true)
+    setMarketStatus({
+      tone: 'progress',
+      message: t('market.processingStart', { total: players.length }),
+    })
 
-    setRemarketingAll(true)
-    setRemarketMessage(`Processing ${players.length} players...`)
-
-    const results = {
-      withdrawn: 0,
-      resold: 0,
-      newlySold: 0,
-      failed: [] as Array<{ name: string; error: string }>,
-    }
-
-    try {
-      // First, re-market players already in the market
-      for (const player of playersInMarket) {
-        const playerName = player.nickname || player.name
-
-        try {
-          if (!player.saleInfo) continue
-
-          // Step 1: Withdraw player from market
-          const withdrawResult = await marketService.withdrawPlayer(
-            token,
-            leagueId,
-            player.saleInfo.marketId
-          )
-
-          if (withdrawResult.error) {
-            results.failed.push({
-              name: playerName,
-              error: `Withdraw failed: ${withdrawResult.error}`,
-            })
-            continue
-          }
-
-          results.withdrawn++
-
-          // Step 2: Re-sell player to market at same price
-          const playerIdToSell = player.playerTeamId || player.id
-          const sellResult = await marketService.sellPlayer(
-            token,
-            leagueId,
-            playerIdToSell,
-            player.marketValue
-          )
-
-          if (sellResult.error) {
-            results.failed.push({
-              name: playerName,
-              error: `Re-sell failed: ${sellResult.error}`,
-            })
-            continue
-          }
-
-          results.resold++
-        } catch (err) {
-          results.failed.push({
-            name: playerName,
-            error: err instanceof Error ? err.message : 'Unknown error',
-          })
-        }
+    const { renewed, added, failures } = await refreshMarketListings(
+      leagueId,
+      players,
+      (current, total, playerName) => {
+        setMarketStatus({
+          tone: 'progress',
+          message: t('market.processing', {
+            current,
+            total,
+            player: playerName,
+          }),
+        })
       }
+    )
 
-      // Second, put new players on the market at their market value
-      for (const player of playersNotInMarket) {
-        const playerName = player.nickname || player.name
-        const playerIdToSell = player.playerTeamId || player.id
-        const salePrice = player.marketValue
+    const updatedPlayers = await teamService.getPlayers(leagueId, teamId)
+    if (updatedPlayers.data) setPlayers(updatedPlayers.data)
 
-        try {
-          const sellResult = await marketService.sellPlayer(
-            token,
-            leagueId,
-            playerIdToSell,
-            salePrice
-          )
-
-          if (sellResult.error) {
-            results.failed.push({
-              name: playerName,
-              error: `Sell failed: ${sellResult.error}`,
-            })
-            continue
-          }
-
-          results.newlySold++
-        } catch (err) {
-          results.failed.push({
-            name: playerName,
-            error: err instanceof Error ? err.message : 'Unknown error',
-          })
-        }
-      }
-
-      // Build result message
-      let message = `Completed: ${results.resold} re-marketed, ${results.newlySold} newly listed.`
-      if (results.failed.length > 0) {
-        message += ` ${results.failed.length} failed.`
-      }
-      setRemarketMessage(message)
-
-      // Reload players to reflect changes
-      const updatedResult = await teamService.getPlayers(
-        token,
-        leagueId,
-        teamId
-      )
-      if (updatedResult.data) {
-        const enrichedPlayers =
-          await playerAnalyticsService.enrichPlayersWithAnalysis(
-            token,
-            updatedResult.data
-          )
-        setPlayers(enrichedPlayers)
-      }
-    } catch (err) {
-      console.error('Re-market all error:', err)
-      setRemarketMessage(
-        `Error: ${err instanceof Error ? err.message : 'Unknown error'}`
-      )
-    } finally {
-      setRemarketingAll(false)
-      setTimeout(() => setRemarketMessage(''), 10000)
-    }
+    setMarketStatus({
+      tone: failures.length > 0 ? 'warning' : 'success',
+      message: t('market.result', {
+        renewed,
+        added,
+        failed:
+          failures.length > 0
+            ? t('market.failedCount', { count: failures.length })
+            : '',
+      }),
+      ...(failures.length > 0 ? { failures } : {}),
+    })
+    setRefreshingMarket(false)
   }
 
-  const summaryStats = PlayerAnalyticsService.calculateSummaryStats(players)
-  const playersWithLowBuyout =
-    PlayerAnalyticsService.getPlayersWithLowBuyout(players)
+  const summaryStats = calculateSummaryStats(players)
+  const playersWithLowBuyout = getPlayersWithLowBuyout(players)
   const playersWithExpiringProtection =
-    PlayerAnalyticsService.getPlayersWithExpiringProtection(players)
+    getPlayersWithExpiringProtection(players)
 
   return (
     <AuthGuard>
@@ -209,39 +121,43 @@ export default function TeamPlayersPage() {
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
             <div className="mb-8">
-              <div className="flex justify-between items-start">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900">
-                    My Players
+                    {t('players.title')}
                   </h1>
-                  <p className="mt-2 text-gray-600">
-                    Manage your current squad and monitor player values
-                  </p>
+                  <p className="mt-2 text-gray-600">{t('players.subtitle')}</p>
                 </div>
                 <Button
-                  onClick={handleRemarketAll}
-                  disabled={remarketingAll || loading || players.length === 0}
-                  className="flex items-center gap-2"
+                  onClick={() => void handleRefreshMarket()}
+                  disabled={refreshingMarket || loading || players.length === 0}
+                  className="gap-2"
                 >
                   <RefreshCw
-                    className={`w-4 h-4 ${remarketingAll ? 'animate-spin' : ''}`}
+                    className={`h-4 w-4 ${refreshingMarket ? 'animate-spin' : ''}`}
                   />
-                  Re-market All Players
+                  {t('market.renew')}
                 </Button>
               </div>
 
-              {remarketMessage && (
+              {marketStatus && (
                 <div
-                  className={`mt-4 px-4 py-3 rounded ${
-                    remarketMessage.includes('Completed') ||
-                    remarketMessage.includes('successfully')
-                      ? 'bg-green-50 border border-green-200 text-green-700'
-                      : remarketMessage.includes('Processing')
-                        ? 'bg-blue-50 border border-blue-200 text-blue-700'
-                        : 'bg-red-50 border border-red-200 text-red-700'
+                  className={`mt-4 rounded border px-4 py-3 text-sm ${
+                    marketStatus.tone === 'success'
+                      ? 'border-green-200 bg-green-50 text-green-700'
+                      : marketStatus.tone === 'progress'
+                        ? 'border-blue-200 bg-blue-50 text-blue-700'
+                        : marketStatus.tone === 'warning'
+                          ? 'border-orange-200 bg-orange-50 text-orange-700'
+                          : 'border-red-200 bg-red-50 text-red-700'
                   }`}
                 >
-                  {remarketMessage}
+                  <p>{marketStatus.message}</p>
+                  {marketStatus.failures && (
+                    <p className="mt-2 whitespace-pre-line">
+                      {marketStatus.failures.join('\n')}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -254,7 +170,9 @@ export default function TeamPlayersPage() {
                     <div className="text-2xl font-bold text-blue-600">
                       {players.length}
                     </div>
-                    <p className="text-sm text-gray-600">Total Players</p>
+                    <p className="text-sm text-gray-600">
+                      {t('players.total')}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -262,7 +180,9 @@ export default function TeamPlayersPage() {
                     <div className="text-2xl font-bold text-green-600">
                       {formatCurrency(summaryStats.totalValue)}
                     </div>
-                    <p className="text-sm text-gray-600">Squad Value</p>
+                    <p className="text-sm text-gray-600">
+                      {t('players.squadValue')}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -270,7 +190,9 @@ export default function TeamPlayersPage() {
                     <div className="text-2xl font-bold text-purple-600">
                       {summaryStats.totalPoints}
                     </div>
-                    <p className="text-sm text-gray-600">Total Points</p>
+                    <p className="text-sm text-gray-600">
+                      {t('players.totalPoints')}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -278,7 +200,9 @@ export default function TeamPlayersPage() {
                     <div className="text-2xl font-bold text-orange-600">
                       {summaryStats.averagePoints}
                     </div>
-                    <p className="text-sm text-gray-600">Avg Points</p>
+                    <p className="text-sm text-gray-600">
+                      {t('players.averagePoints')}
+                    </p>
                   </CardContent>
                 </Card>
               </div>
@@ -293,7 +217,9 @@ export default function TeamPlayersPage() {
                   {playersWithLowBuyout.length > 0 && (
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                       <h3 className="text-sm font-medium text-orange-900 mb-2">
-                        Low Buyout Clauses ({playersWithLowBuyout.length})
+                        {t('players.lowBuyouts', {
+                          count: playersWithLowBuyout.length,
+                        })}
                       </h3>
                       <div className="text-sm text-orange-700">
                         {playersWithLowBuyout
@@ -306,8 +232,9 @@ export default function TeamPlayersPage() {
                   {playersWithExpiringProtection.length > 0 && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                       <h3 className="text-sm font-medium text-red-900 mb-2">
-                        Expiring Protection (
-                        {playersWithExpiringProtection.length})
+                        {t('players.expiringProtection', {
+                          count: playersWithExpiringProtection.length,
+                        })}
                       </h3>
                       <div className="text-sm text-red-700">
                         {playersWithExpiringProtection
@@ -319,7 +246,7 @@ export default function TeamPlayersPage() {
                 </div>
               )}
 
-            {loading && <BouncingBallLoader message="Loading players..." />}
+            {loading && <BouncingBallLoader message={t('players.loading')} />}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
@@ -331,16 +258,20 @@ export default function TeamPlayersPage() {
               <div className="text-center py-12">
                 <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No players found
+                  {t('players.emptyTitle')}
                 </h3>
-                <p className="text-gray-600">Your squad appears to be empty.</p>
+                <p className="text-gray-600">{t('players.emptyText')}</p>
               </div>
             )}
 
             {!loading && !error && players.length > 0 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {sortPlayers(players, 'marketValue', 'desc').map((player) => (
-                  <PlayerCard key={player.id} player={player} />
+                  <PlayerCard
+                    key={player.id}
+                    player={player}
+                    detailsHref={`/leagues/${leagueId}/players/${player.id}`}
+                  />
                 ))}
               </div>
             )}

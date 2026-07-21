@@ -1,6 +1,7 @@
 export interface ApiResponse<T> {
   data: T | null
   error: string | null
+  status?: number
 }
 
 export interface League {
@@ -54,7 +55,7 @@ export interface League {
   description: string
   premium: boolean
   team: {
-    id: number
+    id: string
     money: number
     teamPoints: number
     playersNumber: number
@@ -174,48 +175,6 @@ export interface MarketPlayer {
   numberOfBids: number
 }
 
-export interface MarketValuePoint {
-  lfpId: number
-  marketValue: number
-  date: string
-  bids: number
-}
-
-export interface TrendAnalysis {
-  trend: 'rising' | 'falling' | 'stable' | 'insufficient_data' | 'unknown'
-  change: number
-  changePercent: number
-  analysis: string
-  latestValue?: number
-  oldestValue?: number
-  dataPoints: number
-}
-
-export interface PlayerAnalysis {
-  id: string
-  name: string
-  isMyPlayer: boolean
-  playerType?: 'market' | 'other-manager'
-  currentValue: number
-  currentValueFormatted: string
-  position: string
-  team: string
-  trends: {
-    last5Days: TrendAnalysis
-    last10Days: TrendAnalysis
-  }
-  alerts: string[]
-  saleExpirationHours: number | null
-  buyoutProtectionHours: number | null
-  buyoutClause?: number
-  worthItScore?: number
-  saleInfo?: {
-    salePrice: number
-    expirationDate: string
-    numberOfOffers: number
-  }
-}
-
 export interface MarketHistoryEntry {
   player: {
     id: string
@@ -237,13 +196,6 @@ export interface MarketHistoryEntry {
   date: string
   operation: string
   money: number
-}
-
-export interface MarketValueHistory {
-  lfpId: number
-  marketValue: number
-  date: string
-  bids: number
 }
 
 export interface UserRegion {
@@ -275,6 +227,30 @@ export interface UserInfo {
 export interface TeamMoney {
   teamMoney: number
   teamInvestment: number
+}
+
+export interface LeagueActivity {
+  id: string
+  activityTypeId: number
+  createdAt: string
+  user1Id?: string
+  user2Id?: string
+  playerMasterId?: string
+  amount?: number
+  weekNumber?: number
+}
+
+export interface ActivityPlayer {
+  id: string
+  name: string
+}
+
+export interface CurrentWeek {
+  isLive: boolean
+  nextWeek: number
+  weekNumber: number
+  openingWeekDate: string
+  closingWeekDate: string
 }
 
 export interface TeamLineUp {
@@ -394,7 +370,7 @@ export interface MarketEvolution {
 
 export interface UserLeague extends Omit<League, 'team'> {
   team: {
-    id: number
+    id: string
     money: number
     teamPoints: number
     playersNumber: number

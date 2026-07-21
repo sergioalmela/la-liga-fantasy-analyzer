@@ -1,5 +1,4 @@
 import { formatDistanceToNow } from 'date-fns'
-import { Minus, TrendingDown, TrendingUp } from 'lucide-react'
 import { type MarketPlayer, type Player } from '@/types/api'
 
 export const positionNames = {
@@ -16,6 +15,7 @@ export interface BuyoutStatus {
   status: 'protected' | 'unprotected' | 'expired' | 'expiring'
   message: string
   color: string
+  remainingHours?: number
 }
 
 export interface SaleStatus {
@@ -55,6 +55,7 @@ export function getBuyoutClauseStatus(player: Player): BuyoutStatus | null {
       status: 'expiring',
       message: `${hoursLeft}h left`,
       color: 'text-orange-600',
+      remainingHours: hoursLeft,
     }
   }
 
@@ -63,6 +64,7 @@ export function getBuyoutClauseStatus(player: Player): BuyoutStatus | null {
     status: 'protected',
     message: `${daysLeft}d left`,
     color: 'text-green-600',
+    remainingHours: hoursLeft,
   }
 }
 
@@ -129,65 +131,5 @@ export function calculatePriceDifference(
     difference,
     percentDiff,
     isGoodDeal,
-  }
-}
-
-export interface MomentumDisplay {
-  icon: React.ComponentType<{ className?: string }>
-  iconColor: string
-  scoreColor: string
-  formattedScore: string
-}
-
-export interface TrendDisplay {
-  value: number
-  className: string
-  formattedValue: string
-}
-
-export function getMomentumDisplay(momentumScore: number): MomentumDisplay {
-  if (momentumScore > 0) {
-    return {
-      icon: TrendingUp,
-      iconColor: 'text-green-600',
-      scoreColor: 'text-green-600',
-      formattedScore: `+${momentumScore}%`,
-    }
-  }
-  if (momentumScore < 0) {
-    return {
-      icon: TrendingDown,
-      iconColor: 'text-red-600',
-      scoreColor: 'text-red-600',
-      formattedScore: `${momentumScore}%`,
-    }
-  }
-  return {
-    icon: Minus,
-    iconColor: 'text-gray-500',
-    scoreColor: 'text-gray-500',
-    formattedScore: `${momentumScore}%`,
-  }
-}
-
-export function getTrendDisplay(trendValue: number): TrendDisplay {
-  if (trendValue > 0) {
-    return {
-      value: trendValue,
-      className: 'bg-green-100 text-green-700',
-      formattedValue: `+${trendValue}%`,
-    }
-  }
-  if (trendValue < 0) {
-    return {
-      value: trendValue,
-      className: 'bg-red-100 text-red-700',
-      formattedValue: `${trendValue}%`,
-    }
-  }
-  return {
-    value: trendValue,
-    className: 'bg-gray-100 text-gray-600',
-    formattedValue: `${trendValue}%`,
   }
 }

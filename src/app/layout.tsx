@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { LanguageProvider } from '@/i18n/language-provider'
 import './globals.css'
 
 const geistSans = Geist({
@@ -13,9 +14,12 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'La Liga Fantasy Market Analyzer',
-  description: 'Analyze your La Liga fantasy football team and market trends',
+  title: 'Analizador de LALIGA Fantasy',
+  description:
+    'Consulta tu plantilla, la actividad de tu liga y las oportunidades del mercado de LALIGA Fantasy',
 }
+
+export const dynamic = 'force-dynamic'
 
 export default function RootLayout({
   children,
@@ -23,11 +27,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-gray-900`}
       >
-        {children}
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   )

@@ -1,94 +1,110 @@
-import { ApiResponse } from '@/types/api'
+import { FANTASY_COMPETITION_PATH } from '../config/fantasy-api.ts'
+import type { ApiResponse } from '../types/api'
+
+const CMP = FANTASY_COMPETITION_PATH
 
 export const endpoints = {
-  // User endpoints
   user: {
-    info: '/v3/user/me',
-    leagues: '/v4/leagues',
+    info: '/v4/user/me',
+    leagues: `${CMP}/leagues`,
   },
-
-  // Player endpoints
   player: {
-    stats: (playerId: string) => `/v3/player/${playerId}`,
-    marketValue: (playerId: string) => `/v3/player/${playerId}/market-value`,
+    all: `${CMP}/players`,
+    details: (playerId: string, leagueId: string) =>
+      `${CMP}/player/${playerId}/league/${leagueId}`,
   },
-
-  // Team endpoints
   team: {
-    info: (teamId: string) => `/v3/teams/${teamId}`,
-    money: (teamId: string) => `/v3/teams/${teamId}/money`,
-    lineup: (teamId: string) => `/v3/teams/${teamId}/lineup`,
+    master: '/v3/teams-master',
+    info: (teamId: string, leagueId: string) =>
+      `${CMP}/leagues/${leagueId}/teams/${teamId}`,
+    money: (teamId: string) => `${CMP}/teams/${teamId}/money`,
+    lineup: (teamId: string) => `${CMP}/teams/${teamId}/lineup`,
     lineupByWeek: (teamId: string, weekId: string) =>
-      `/v4/teams/${teamId}/lineup/week/${weekId}`,
-    favouritePlayers: (teamId: string) =>
-      `/v4/teams/${teamId}/favourite-players`,
+      `${CMP}/teams/${teamId}/lineup/week/${weekId}`,
   },
-
-  // League endpoints
   league: {
-    info: (leagueId: string) => `/v4/leagues/${leagueId}`,
-    team: (teamId: string, leagueId: string) =>
-      `/v3/leagues/${leagueId}/teams/${teamId}`,
-    ranking: (leagueId: string) => `/v5/leagues/${leagueId}/ranking`,
+    ranking: (leagueId: string) => `${CMP}/leagues/${leagueId}/standing`,
     rankingByWeek: (leagueId: string, weekId: number) =>
-      `/v5/leagues/${leagueId}/ranking/${weekId}`,
-    market: (leagueId: string) => `/v3/league/${leagueId}/market`,
-    marketHistory: (leagueId: string) =>
-      `/v3/league/${leagueId}/market/history`,
+      `${CMP}/leagues/${leagueId}/standing/${weekId}`,
+    activity: (leagueId: string, page: number) =>
+      `${CMP}/leagues/${leagueId}/activity/${page}`,
+    team: (teamId: string, leagueId: string) =>
+      `${CMP}/leagues/${leagueId}/teams/${teamId}`,
+    market: (leagueId: string) => `${CMP}/league/${leagueId}/market`,
   },
-
-  // Market endpoints
   market: {
-    makeBid: (leagueId: string, offerId: string) =>
-      `/v3/league/${leagueId}/market/${offerId}/bid`,
     sellPlayer: (leagueId: string) =>
-      `/v3/league/${leagueId}/market/sell?x-lang=es`,
+      `${CMP}/league/${leagueId}/market/sell?x-lang=es`,
     withdrawPlayer: (leagueId: string, marketId: string) =>
-      `/v3/league/${leagueId}/market/${marketId}/delete?x-lang=es`,
+      `${CMP}/league/${leagueId}/market/${marketId}/delete?x-lang=es`,
   },
-
-  // Stats endpoints
   stats: {
-    weekMatches: (weekId: string) => `/stats/v1/stats/week/${weekId}`,
-    marketEvolution: {
-      week: '/stats/v1/market/evolution/week',
-      month: '/stats/v1/market/evolution/month',
-      season: '/stats/v1/market/evolution/season',
-    },
+    weekMatches: (weekId: string) => `/stats${CMP}/stats/week/${weekId}`,
   },
+  season: {
+    currentWeek: `${CMP}/week/current`,
+    calendar: (weekNumber: number) =>
+      `${CMP}/calendar?weekNumber=${weekNumber}&x-lang=es`,
+  },
+}
+
+function getErrorMessage(data: unknown, status: number): string {
+  if (typeof data === 'object' && data !== null) {
+    const record = data as Record<string, unknown>
+    if (typeof record.message === 'string') return record.message
+    if (typeof record.error === 'string') return record.error
+  }
+  return `Fantasy API request failed with HTTP ${status}`
 }
 
 export class ApiClient {
   private async makeRequest<T>(
     endpoint: string,
-    cookie: string,
     options: {
       method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
       body?: unknown
     } = {}
   ): Promise<ApiResponse<T>> {
     try {
+      const headers = new Headers()
+      if (options.body !== undefined)
+        headers.set('Content-Type', 'application/json')
+
       const response = await fetch(
         `/api/fantasy?path=${encodeURIComponent(endpoint)}`,
         {
           method: options.method || 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${cookie}`,
-          },
-          ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+          headers,
+          credentials: 'same-origin',
+          ...(options.body !== undefined
+            ? { body: JSON.stringify(options.body) }
+            : {}),
         }
       )
+
+      const text = await response.text()
+      let data: unknown = null
+      if (text.trim()) {
+        try {
+          data = JSON.parse(text)
+        } catch {
+          return {
+            data: null,
+            error: `Fantasy API returned an invalid response (HTTP ${response.status})`,
+            status: response.status,
+          }
+        }
+      }
 
       if (!response.ok) {
         return {
           data: null,
-          error: `HTTP ${response.status}: ${response.statusText}`,
+          error: getErrorMessage(data, response.status),
+          status: response.status,
         }
       }
 
-      const data = await response.json()
-      return { data, error: null }
+      return { data: data as T, error: null, status: response.status }
     } catch (error) {
       return {
         data: null,
@@ -98,20 +114,20 @@ export class ApiClient {
     }
   }
 
-  async get<T>(endpoint: string, cookie: string): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>(endpoint, cookie, { method: 'GET' })
+  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(endpoint, { method: 'GET' })
   }
 
-  async post<T>(
-    endpoint: string,
-    cookie: string,
-    body?: unknown
-  ): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>(endpoint, cookie, { method: 'POST', body })
+  async post<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(endpoint, { method: 'POST', body })
   }
 
-  async delete<T>(endpoint: string, cookie: string): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>(endpoint, cookie, { method: 'DELETE' })
+  async put<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(endpoint, { method: 'PUT', body })
+  }
+
+  async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(endpoint, { method: 'DELETE' })
   }
 }
 

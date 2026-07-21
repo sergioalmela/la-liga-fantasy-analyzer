@@ -1,20 +1,51 @@
 'use client'
 
-import { LogOut, Trophy } from 'lucide-react'
+import { LogOut, Trophy, User } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { removeAuthToken } from '@/lib/auth'
-
-const navigation = [{ name: 'Leagues', href: '/leagues', icon: Trophy }]
+import { useLanguage } from '@/i18n/language-provider'
+import { logout } from '@/lib/auth'
+import { userService } from '@/services/user-service'
+import { LanguageSelector } from './language-selector'
 
 export function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
+  const [managerName, setManagerName] = useState<string | null>(null)
+  const { t } = useLanguage()
+  const navigation = [
+    { name: t('nav.leagues'), href: '/leagues', icon: Trophy },
+  ]
 
-  const handleLogout = () => {
-    removeAuthToken()
-    router.push('/login')
+  useEffect(() => {
+    let active = true
+
+    const loadUser = async () => {
+      const result = await userService.getCurrentUser()
+      if (!active) return
+
+      if (result.status === 401) {
+        await logout()
+        router.replace('/login')
+        router.refresh()
+        return
+      }
+
+      if (result.data) setManagerName(result.data.managerName)
+    }
+
+    void loadUser()
+    return () => {
+      active = false
+    }
+  }, [router])
+
+  const handleLogout = async () => {
+    await logout()
+    router.replace('/login')
+    router.refresh()
   }
 
   return (
@@ -24,7 +55,8 @@ export function Navbar() {
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link href="/leagues" className="text-xl font-bold text-gray-900">
-                La Liga Fantasy
+                <span className="sm:hidden">LALIGA</span>
+                <span className="hidden sm:inline">La Liga Fantasy</span>
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
@@ -47,7 +79,14 @@ export function Navbar() {
               })}
             </div>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
+            <LanguageSelector />
+            {managerName && (
+              <div className="hidden items-center gap-2 text-sm text-gray-600 md:flex">
+                <User className="h-4 w-4" />
+                <span>{managerName}</span>
+              </div>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -55,7 +94,7 @@ export function Navbar() {
               className="inline-flex items-center"
             >
               <LogOut className="w-4 h-4 mr-2" />
-              Logout
+              <span className="hidden sm:inline">{t('nav.logout')}</span>
             </Button>
           </div>
         </div>

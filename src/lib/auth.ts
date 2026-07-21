@@ -1,91 +1,68 @@
-const uuid = 'af88bcff-1157-40a0-b579-030728aacf0b'
-const urlApi =
-  'https://login.laliga.es/laligadspprob2c.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1A_ResourceOwnerv2'
+interface AuthResponse {
+  authenticated?: unknown
+  error?: unknown
+}
 
-export async function getToken(
+async function parseResponse(response: Response): Promise<AuthResponse> {
+  try {
+    return (await response.json()) as AuthResponse
+  } catch {
+    return {}
+  }
+}
+
+export async function login(
   email: string,
   password: string
-): Promise<string | null> {
-  const data = {
-    grant_type: 'password',
-    client_id: uuid,
-    scope: `openid ${uuid} offline_access`,
-    redirect_uri: 'authredirect://com.lfp.laligafantasy',
-    username: email,
-    password: password,
-    response_type: 'id_token',
-  }
-
+): Promise<{ authenticated: boolean; error: string | null }> {
   try {
-    const response = await fetch(urlApi, {
+    const response = await fetch('/api/auth/login', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams(data),
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ email, password }),
     })
+    const body = await parseResponse(response)
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Authentication failed:', errorText)
-      return null
+    return {
+      authenticated: response.ok && body.authenticated === true,
+      error:
+        typeof body.error === 'string'
+          ? body.error
+          : response.ok
+            ? null
+            : 'Authentication failed',
     }
-
-    const jsonResponse = await response.json()
-
-    if (!jsonResponse.access_token) {
-      console.error('No access token in response')
-      return null
+  } catch {
+    return {
+      authenticated: false,
+      error: 'Authentication service is unavailable',
     }
-
-    return jsonResponse.access_token.toString()
-  } catch (error) {
-    console.error('Error getting token:', error)
-    return null
   }
 }
 
-export function getAuthToken(): string | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-  return localStorage.getItem('auth_token')
-}
-
-export function setAuthToken(token: string): void {
-  if (typeof window === 'undefined') {
-    return
-  }
-  localStorage.setItem('auth_token', token)
-}
-
-export function removeAuthToken(): void {
-  if (typeof window === 'undefined') {
-    return
-  }
-  localStorage.removeItem('auth_token')
-}
-
-export function isTokenExpired(token: string): boolean {
+export async function logout(): Promise<void> {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    const now = Date.now() / 1000
-    return payload.exp < now
-  } catch (error) {
-    console.error('Error checking token expiration:', error)
-    return true
+    await fetch('/api/auth/session', {
+      method: 'DELETE',
+      credentials: 'same-origin',
+    })
+  } catch {
+    // The local session is also removed when its HttpOnly cookie expires.
   }
 }
 
-export function isAuthenticated(): boolean {
-  const token = getAuthToken()
-  if (!token) return false
+export async function isAuthenticated(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/auth/session', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+    })
+    if (!response.ok) return false
 
-  if (isTokenExpired(token)) {
-    console.log('Token expired, removing from storage')
-    removeAuthToken()
+    const body = await parseResponse(response)
+    return body.authenticated === true
+  } catch {
     return false
   }
-
-  return true
 }

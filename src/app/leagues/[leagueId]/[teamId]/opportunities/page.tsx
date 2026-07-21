@@ -9,16 +9,22 @@ import { PlayerCard } from '@/components/player/player-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
-import { getAuthToken } from '@/lib/auth'
+import { useLanguage } from '@/i18n/language-provider'
 import { leagueService } from '@/services/league-service'
 import {
-  PlayerAnalyticsService,
-  playerAnalyticsService,
+  type MarketTrend,
+  recordAndBuildMarketTrends,
+} from '@/services/market-trend-service'
+import {
+  calculateSummaryStats,
+  getPlayersWithExpiringProtection,
+  getPlayersWithLowBuyout,
 } from '@/services/player-analytics-service'
 import { teamService } from '@/services/team-service'
 import { sortOpportunities } from '@/utils/player-sorting-utils'
 
 export default function PlayerOpportunitiesPage() {
+  const { t } = useLanguage()
   const params = useParams()
   const leagueId = params.leagueId as string
   const teamId = params.teamId as string
@@ -26,17 +32,15 @@ export default function PlayerOpportunitiesPage() {
   const [opponentPlayers, setOpponentPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [trends, setTrends] = useState<Map<string, MarketTrend>>(new Map())
 
   useEffect(() => {
     const loadPlayers = async () => {
-      const token = getAuthToken()
-      if (!token) return
-
       try {
-        const usersResult = await leagueService.getUsers(token, leagueId)
+        const usersResult = await leagueService.getUsers(leagueId)
 
         if (usersResult.error) {
-          setError(usersResult.error)
+          setError(t('opportunities.loadError'))
         } else {
           const opponentUsers =
             usersResult.data?.filter((user) => {
@@ -46,14 +50,14 @@ export default function PlayerOpportunitiesPage() {
           if (opponentUsers.length > 0) {
             const opponentPlayersResults = await Promise.all(
               opponentUsers.map((user) =>
-                teamService.getPlayers(token, leagueId, user.team.id.toString())
+                teamService.getPlayers(leagueId, user.team.id.toString())
               )
             )
 
             const allOpponentPlayersWithOwner = opponentPlayersResults
-              .filter((result) => result.data)
-              .flatMap((result, index) => {
-                const owner = opponentUsers[index]
+              .map((result, index) => ({ result, owner: opponentUsers[index] }))
+              .filter(({ result }) => result.data)
+              .flatMap(({ result, owner }) => {
                 return (result.data || []).map((player) => ({
                   ...player,
                   owner: {
@@ -64,37 +68,24 @@ export default function PlayerOpportunitiesPage() {
                 }))
               })
 
-            const expiringOpponentPlayers =
-              PlayerAnalyticsService.getPlayersWithExpiringProtection(
-                allOpponentPlayersWithOwner
-              )
-            const enrichedOpponentPlayers =
-              await playerAnalyticsService.enrichPlayersWithAnalysis(
-                token,
-                expiringOpponentPlayers
-              )
-
-            setOpponentPlayers(enrichedOpponentPlayers)
+            setOpponentPlayers(allOpponentPlayersWithOwner)
+            setTrends(recordAndBuildMarketTrends(allOpponentPlayersWithOwner))
           }
         }
       } catch {
-        setError('Failed to load opponent players')
+        setError(t('opportunities.loadError'))
       } finally {
         setLoading(false)
       }
     }
 
     loadPlayers()
-  }, [leagueId, teamId])
+  }, [leagueId, t, teamId])
 
-  const playersWithOpportunities =
-    PlayerAnalyticsService.getPlayersWithLowBuyout(opponentPlayers)
+  const playersWithOpportunities = getPlayersWithLowBuyout(opponentPlayers)
   const playersWithExpiringProtection =
-    PlayerAnalyticsService.getPlayersWithExpiringProtection(opponentPlayers)
-  const summaryStats =
-    PlayerAnalyticsService.calculateSummaryStats(opponentPlayers)
-  const trendingUpPlayers =
-    PlayerAnalyticsService.getTrendingUpPlayers(opponentPlayers)
+    getPlayersWithExpiringProtection(opponentPlayers)
+  const summaryStats = calculateSummaryStats(opponentPlayers)
 
   return (
     <AuthGuard>
@@ -105,16 +96,15 @@ export default function PlayerOpportunitiesPage() {
           <div className="px-4 py-6 sm:px-0">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">
-                Player Opportunities
+                {t('opportunities.title')}
               </h1>
               <p className="mt-2 text-gray-600">
-                Discover buying opportunities from other managers' players with
-                trend analysis
+                {t('opportunities.subtitle')}
               </p>
             </div>
 
             {loading && (
-              <BouncingBallLoader message="Loading opponent players..." />
+              <BouncingBallLoader message={t('opportunities.loading')} />
             )}
 
             {error && (
@@ -127,11 +117,9 @@ export default function PlayerOpportunitiesPage() {
               <div className="text-center py-12">
                 <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No opponent players found
+                  {t('opportunities.emptyTitle')}
                 </h3>
-                <p className="text-gray-600">
-                  No players available from other managers in this league.
-                </p>
+                <p className="text-gray-600">{t('opportunities.emptyText')}</p>
               </div>
             )}
 
@@ -144,7 +132,9 @@ export default function PlayerOpportunitiesPage() {
                       <div className="text-2xl font-bold text-blue-600">
                         {opponentPlayers.length}
                       </div>
-                      <p className="text-sm text-gray-600">Total Players</p>
+                      <p className="text-sm text-gray-600">
+                        {t('players.total')}
+                      </p>
                     </CardContent>
                   </Card>
                   <Card>
@@ -152,15 +142,19 @@ export default function PlayerOpportunitiesPage() {
                       <div className="text-2xl font-bold text-orange-600">
                         {playersWithOpportunities.length}
                       </div>
-                      <p className="text-sm text-gray-600">Low Buyouts</p>
+                      <p className="text-sm text-gray-600">
+                        {t('opportunities.lowBuyouts')}
+                      </p>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-2xl font-bold text-purple-600">
-                        {trendingUpPlayers.length}
+                        {playersWithExpiringProtection.length}
                       </div>
-                      <p className="text-sm text-gray-600">Trending Up</p>
+                      <p className="text-sm text-gray-600">
+                        {t('opportunities.protectionExpiring')}
+                      </p>
                     </CardContent>
                   </Card>
                   <Card>
@@ -168,7 +162,9 @@ export default function PlayerOpportunitiesPage() {
                       <div className="text-2xl font-bold text-green-600">
                         {summaryStats.averagePoints}
                       </div>
-                      <p className="text-sm text-gray-600">Avg Points</p>
+                      <p className="text-sm text-gray-600">
+                        {t('players.averagePoints')}
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
@@ -180,8 +176,9 @@ export default function PlayerOpportunitiesPage() {
                     {playersWithOpportunities.length > 0 && (
                       <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                         <h3 className="text-sm font-medium text-orange-900 mb-2">
-                          🎯 Low Buyout Opportunities (
-                          {playersWithOpportunities.length})
+                          {t('opportunities.alert', {
+                            count: playersWithOpportunities.length,
+                          })}
                         </h3>
                         <div className="text-sm text-orange-700">
                           {playersWithOpportunities
@@ -195,7 +192,13 @@ export default function PlayerOpportunitiesPage() {
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {sortOpportunities(opponentPlayers).map((player) => (
-                    <PlayerCard key={player.id} player={player} />
+                    <PlayerCard
+                      key={player.id}
+                      player={player}
+                      detailsHref={`/leagues/${leagueId}/players/${player.id}`}
+                      showMarketTrend
+                      marketTrend={trends.get(player.id)}
+                    />
                   ))}
                 </div>
               </div>
