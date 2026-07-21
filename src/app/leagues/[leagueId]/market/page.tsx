@@ -75,7 +75,11 @@ export default function MarketPlayersPage() {
             {!loading && !error && players.length > 0 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {sortOpportunities(players).map((player) => (
-                  <PlayerCard key={player.id} player={player} />
+                  <PlayerCard
+                    key={player.id}
+                    player={player}
+                    detailsHref={`/leagues/${leagueId}/players/${player.id}`}
+                  />
                 ))}
               </div>
             )}

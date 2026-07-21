@@ -8,11 +8,16 @@ cláusulas y el mercado de LALIGA Fantasy durante la temporada 2026/27.
 - Compatible con la API 2026/27 y la competición de Primera División (`1`).
 - Ligas, clasificación, plantilla propia, plantillas rivales y mercado en modo
   lectura.
+- Panel de jornada con alineación actual o histórica, aviso de once incompleto,
+  calendario, resultados, clasificación semanal y evolución acumulada.
+- Fichas individuales con estado, valor, puntuación y desglose por jornada
+  cuando la API lo proporciona.
 - Radar read-only de actividad, presupuesto, inversión y balance reciente por
   mánager.
 - Validación runtime de las respuestas remotas antes de entregarlas a React.
 - Sesión mediante cookie `HttpOnly`, sin guardar el bearer token en
-  `localStorage`.
+  `localStorage`, y comprobación del usuario upstream desde la barra de
+  navegación.
 - Publicación masiva de la plantilla al valor de mercado, renovando anuncios
   existentes con confirmación previa y resultado por jugador.
 - Pujas, ofertas, cláusulas y otras mutaciones permanecen desactivadas.

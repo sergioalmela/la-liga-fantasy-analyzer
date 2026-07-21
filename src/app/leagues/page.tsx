@@ -1,6 +1,14 @@
 'use client'
 
-import { Activity, Check, Shield, Star, Trophy, Users } from 'lucide-react'
+import {
+  Activity,
+  Check,
+  LayoutDashboard,
+  Shield,
+  Star,
+  Trophy,
+  Users,
+} from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { AuthGuard } from '@/components/auth/auth-guard'
@@ -105,9 +113,17 @@ export default function LeaguesPage() {
 
                         <div className="pt-4 flex gap-2 flex-wrap">
                           <Link
-                            href={`/leagues/${league.id}/${league.team.id}/activity`}
+                            href={`/leagues/${league.id}/${league.team.id}`}
                           >
                             <Button size="sm" variant="primary">
+                              <LayoutDashboard className="w-4 h-4 mr-1" />
+                              Matchday
+                            </Button>
+                          </Link>
+                          <Link
+                            href={`/leagues/${league.id}/${league.team.id}/activity`}
+                          >
+                            <Button size="sm" variant="outline">
                               <Activity className="w-4 h-4 mr-1" /> Radar
                             </Button>
                           </Link>

@@ -7,6 +7,7 @@ import {
   Target,
   User,
 } from 'lucide-react'
+import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { PositionBadge } from '@/components/ui/position-badge'
 import {
@@ -20,9 +21,10 @@ import { getBuyoutClauseStatus, getSaleStatus } from '@/lib/player-utils'
 
 interface PlayerCardProps {
   player: Player
+  detailsHref?: string
 }
 
-export function PlayerCard({ player }: PlayerCardProps) {
+export function PlayerCard({ player, detailsHref }: PlayerCardProps) {
   const buyoutStatus = getBuyoutClauseStatus(player)
   const saleStatus = getSaleStatus(player)
 
@@ -98,6 +100,17 @@ export function PlayerCard({ player }: PlayerCardProps) {
                 {buyoutStatus.message}
               </div>
             )}
+          </div>
+        )}
+
+        {detailsHref && (
+          <div className="border-t pt-3 text-right">
+            <Link
+              href={detailsHref}
+              className="text-sm font-medium text-blue-600 hover:text-blue-800"
+            >
+              View player details →
+            </Link>
           </div>
         )}
 

@@ -180,7 +180,11 @@ export default function PlayerOpportunitiesPage() {
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {sortOpportunities(opponentPlayers).map((player) => (
-                    <PlayerCard key={player.id} player={player} />
+                    <PlayerCard
+                      key={player.id}
+                      player={player}
+                      detailsHref={`/leagues/${leagueId}/players/${player.id}`}
+                    />
                   ))}
                 </div>
               </div>

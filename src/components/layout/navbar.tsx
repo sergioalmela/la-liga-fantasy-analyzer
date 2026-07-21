@@ -1,16 +1,42 @@
 'use client'
 
-import { LogOut, Trophy } from 'lucide-react'
+import { LogOut, Trophy, User } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { logout } from '@/lib/auth'
+import { userService } from '@/services/user-service'
 
 const navigation = [{ name: 'Leagues', href: '/leagues', icon: Trophy }]
 
 export function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
+  const [managerName, setManagerName] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+
+    const loadUser = async () => {
+      const result = await userService.getCurrentUser()
+      if (!active) return
+
+      if (result.status === 401) {
+        await logout()
+        router.replace('/login')
+        router.refresh()
+        return
+      }
+
+      if (result.data) setManagerName(result.data.managerName)
+    }
+
+    void loadUser()
+    return () => {
+      active = false
+    }
+  }, [router])
 
   const handleLogout = async () => {
     await logout()
@@ -48,7 +74,13 @@ export function Navbar() {
               })}
             </div>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center gap-3">
+            {managerName && (
+              <div className="hidden items-center gap-2 text-sm text-gray-600 md:flex">
+                <User className="h-4 w-4" />
+                <span>{managerName}</span>
+              </div>
+            )}
             <Button
               variant="outline"
               size="sm"
