@@ -4,6 +4,7 @@ import {
   getTokenLifetimeSeconds,
   isValidProviderToken,
 } from '@/lib/auth-session'
+import { isSameOriginRequest } from '@/lib/request-origin'
 
 const CLIENT_ID = 'af88bcff-1157-40a0-b579-030728aacf0b'
 const TOKEN_URL =
@@ -19,13 +20,8 @@ function noStoreJson(body: unknown, status = 200): NextResponse {
   })
 }
 
-function isSameOrigin(request: NextRequest): boolean {
-  const origin = request.headers.get('origin')
-  return !origin || origin === request.nextUrl.origin
-}
-
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  if (!isSameOrigin(request)) {
+  if (!isSameOriginRequest(request, true)) {
     return noStoreJson({ error: 'Request origin is not allowed' }, 403)
   }
 
