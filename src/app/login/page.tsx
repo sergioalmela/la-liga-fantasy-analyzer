@@ -130,7 +130,7 @@ export default function LoginPage() {
               </h4>
               <p className="text-xs text-blue-700">
                 This app uses your La Liga Fantasy credentials to access your
-                team data, analyze player trends, track market opportunities,
+                team data, review league activity, track market opportunities,
                 and monitor buyout clauses. Your password is forwarded once to
                 La Liga's login service and is not stored. The resulting session
                 token is kept in an HttpOnly cookie.

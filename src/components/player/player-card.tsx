@@ -16,12 +16,7 @@ import {
   getPlayerDisplayName,
   type Player,
 } from '@/entities/player'
-import {
-  getBuyoutClauseStatus,
-  getMomentumDisplay,
-  getSaleStatus,
-  getTrendDisplay,
-} from '@/lib/player-utils'
+import { getBuyoutClauseStatus, getSaleStatus } from '@/lib/player-utils'
 
 interface PlayerCardProps {
   player: Player
@@ -105,46 +100,6 @@ export function PlayerCard({ player }: PlayerCardProps) {
             )}
           </div>
         )}
-
-        {player.analysis &&
-          (() => {
-            const momentumDisplay = getMomentumDisplay(
-              player.analysis.momentumScore
-            )
-            const trend1d = getTrendDisplay(player.analysis.trends.last1Days)
-            const trend3d = getTrendDisplay(player.analysis.trends.last3Days)
-            const trend7d = getTrendDisplay(player.analysis.trends.last7Days)
-
-            return (
-              <div className="border-t pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600 flex items-center gap-1">
-                    <momentumDisplay.icon
-                      className={`w-4 h-4 ${momentumDisplay.iconColor}`}
-                    />
-                    Momentum:
-                  </span>
-                  <span className={`font-bold ${momentumDisplay.scoreColor}`}>
-                    {momentumDisplay.formattedScore}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-500">Trends (1d/3d/7d):</span>
-                  <div className="flex gap-2">
-                    <span className={`px-2 py-1 rounded ${trend1d.className}`}>
-                      {trend1d.formattedValue}
-                    </span>
-                    <span className={`px-2 py-1 rounded ${trend3d.className}`}>
-                      {trend3d.formattedValue}
-                    </span>
-                    <span className={`px-2 py-1 rounded ${trend7d.className}`}>
-                      {trend7d.formattedValue}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )
-          })()}
 
         {player.saleInfo && (
           <div className="border-t pt-3 bg-blue-50 -mx-6 -mb-6 px-6 pb-6 rounded-b-lg">

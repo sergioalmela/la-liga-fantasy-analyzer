@@ -1,34 +1,30 @@
 'use client'
 
-import { RefreshCw, Users } from 'lucide-react'
+import { Users } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
-import { marketService } from '@/services/market-service'
 import {
-  PlayerAnalyticsService,
-  playerAnalyticsService,
+  calculateSummaryStats,
+  getPlayersWithExpiringProtection,
+  getPlayersWithLowBuyout,
 } from '@/services/player-analytics-service'
 import { teamService } from '@/services/team-service'
 import { formatCurrency } from '@/utils/format-utils'
 import { sortPlayers } from '@/utils/player-sorting-utils'
 
 export default function TeamPlayersPage() {
-  const marketWritesEnabled = false
   const params = useParams()
   const leagueId = params.leagueId as string
   const teamId = params.teamId as string
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [remarketingAll, setRemarketingAll] = useState(false)
-  const [remarketMessage, setRemarketMessage] = useState('')
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -38,11 +34,7 @@ export default function TeamPlayersPage() {
         if (result.error) {
           setError(result.error)
         } else {
-          const enrichedPlayers =
-            await playerAnalyticsService.enrichPlayersWithAnalysis(
-              result.data || []
-            )
-          setPlayers(enrichedPlayers)
+          setPlayers(result.data || [])
         }
       } catch {
         setError('Failed to load players')
@@ -54,137 +46,10 @@ export default function TeamPlayersPage() {
     loadPlayers()
   }, [leagueId, teamId])
 
-  const handleRemarketAll = async () => {
-    const playersInMarket = players.filter((p) => p.saleInfo)
-    const playersNotInMarket = players.filter((p) => !p.saleInfo)
-
-    if (players.length === 0) {
-      setRemarketMessage('No players found.')
-      setTimeout(() => setRemarketMessage(''), 3000)
-      return
-    }
-
-    setRemarketingAll(true)
-    setRemarketMessage(`Processing ${players.length} players...`)
-
-    const results = {
-      withdrawn: 0,
-      resold: 0,
-      newlySold: 0,
-      failed: [] as Array<{ name: string; error: string }>,
-    }
-
-    try {
-      // First, re-market players already in the market
-      for (const player of playersInMarket) {
-        const playerName = player.nickname || player.name
-
-        try {
-          if (!player.saleInfo) continue
-
-          // Step 1: Withdraw player from market
-          const withdrawResult = await marketService.withdrawPlayer(
-            leagueId,
-            player.saleInfo.marketId
-          )
-
-          if (withdrawResult.error) {
-            results.failed.push({
-              name: playerName,
-              error: `Withdraw failed: ${withdrawResult.error}`,
-            })
-            continue
-          }
-
-          results.withdrawn++
-
-          // Step 2: Re-sell player to market at same price
-          const playerIdToSell = player.playerTeamId || player.id
-          const sellResult = await marketService.sellPlayer(
-            leagueId,
-            playerIdToSell,
-            player.marketValue
-          )
-
-          if (sellResult.error) {
-            results.failed.push({
-              name: playerName,
-              error: `Re-sell failed: ${sellResult.error}`,
-            })
-            continue
-          }
-
-          results.resold++
-        } catch (err) {
-          results.failed.push({
-            name: playerName,
-            error: err instanceof Error ? err.message : 'Unknown error',
-          })
-        }
-      }
-
-      // Second, put new players on the market at their market value
-      for (const player of playersNotInMarket) {
-        const playerName = player.nickname || player.name
-        const playerIdToSell = player.playerTeamId || player.id
-        const salePrice = player.marketValue
-
-        try {
-          const sellResult = await marketService.sellPlayer(
-            leagueId,
-            playerIdToSell,
-            salePrice
-          )
-
-          if (sellResult.error) {
-            results.failed.push({
-              name: playerName,
-              error: `Sell failed: ${sellResult.error}`,
-            })
-            continue
-          }
-
-          results.newlySold++
-        } catch (err) {
-          results.failed.push({
-            name: playerName,
-            error: err instanceof Error ? err.message : 'Unknown error',
-          })
-        }
-      }
-
-      // Build result message
-      let message = `Completed: ${results.resold} re-marketed, ${results.newlySold} newly listed.`
-      if (results.failed.length > 0) {
-        message += ` ${results.failed.length} failed.`
-      }
-      setRemarketMessage(message)
-
-      // Reload players to reflect changes
-      const updatedResult = await teamService.getPlayers(leagueId, teamId)
-      if (updatedResult.data) {
-        const enrichedPlayers =
-          await playerAnalyticsService.enrichPlayersWithAnalysis(
-            updatedResult.data
-          )
-        setPlayers(enrichedPlayers)
-      }
-    } catch (err) {
-      console.error('Re-market all error:', err)
-      setRemarketMessage(
-        `Error: ${err instanceof Error ? err.message : 'Unknown error'}`
-      )
-    } finally {
-      setRemarketingAll(false)
-      setTimeout(() => setRemarketMessage(''), 10000)
-    }
-  }
-
-  const summaryStats = PlayerAnalyticsService.calculateSummaryStats(players)
-  const playersWithLowBuyout =
-    PlayerAnalyticsService.getPlayersWithLowBuyout(players)
+  const summaryStats = calculateSummaryStats(players)
+  const playersWithLowBuyout = getPlayersWithLowBuyout(players)
   const playersWithExpiringProtection =
-    PlayerAnalyticsService.getPlayersWithExpiringProtection(players)
+    getPlayersWithExpiringProtection(players)
 
   return (
     <AuthGuard>
@@ -194,47 +59,10 @@ export default function TeamPlayersPage() {
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
             <div className="mb-8">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
-                    My Players
-                  </h1>
-                  <p className="mt-2 text-gray-600">
-                    Manage your current squad and monitor player values
-                  </p>
-                </div>
-                <Button
-                  onClick={handleRemarketAll}
-                  disabled={
-                    !marketWritesEnabled ||
-                    remarketingAll ||
-                    loading ||
-                    players.length === 0
-                  }
-                  title="Market writes are disabled until the 2026/27 API contract is verified"
-                  className="flex items-center gap-2"
-                >
-                  <RefreshCw
-                    className={`w-4 h-4 ${remarketingAll ? 'animate-spin' : ''}`}
-                  />
-                  Re-market All Players (disabled)
-                </Button>
-              </div>
-
-              {remarketMessage && (
-                <div
-                  className={`mt-4 px-4 py-3 rounded ${
-                    remarketMessage.includes('Completed') ||
-                    remarketMessage.includes('successfully')
-                      ? 'bg-green-50 border border-green-200 text-green-700'
-                      : remarketMessage.includes('Processing')
-                        ? 'bg-blue-50 border border-blue-200 text-blue-700'
-                        : 'bg-red-50 border border-red-200 text-red-700'
-                  }`}
-                >
-                  {remarketMessage}
-                </div>
-              )}
+              <h1 className="text-3xl font-bold text-gray-900">My Players</h1>
+              <p className="mt-2 text-gray-600">
+                Review your current squad and monitor player values
+              </p>
             </div>
 
             {/* Summary Stats */}

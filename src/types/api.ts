@@ -175,48 +175,6 @@ export interface MarketPlayer {
   numberOfBids: number
 }
 
-export interface MarketValuePoint {
-  lfpId: number
-  marketValue: number
-  date: string
-  bids: number
-}
-
-export interface TrendAnalysis {
-  trend: 'rising' | 'falling' | 'stable' | 'insufficient_data' | 'unknown'
-  change: number
-  changePercent: number
-  analysis: string
-  latestValue?: number
-  oldestValue?: number
-  dataPoints: number
-}
-
-export interface PlayerAnalysis {
-  id: string
-  name: string
-  isMyPlayer: boolean
-  playerType?: 'market' | 'other-manager'
-  currentValue: number
-  currentValueFormatted: string
-  position: string
-  team: string
-  trends: {
-    last5Days: TrendAnalysis
-    last10Days: TrendAnalysis
-  }
-  alerts: string[]
-  saleExpirationHours: number | null
-  buyoutProtectionHours: number | null
-  buyoutClause?: number
-  worthItScore?: number
-  saleInfo?: {
-    salePrice: number
-    expirationDate: string
-    numberOfOffers: number
-  }
-}
-
 export interface MarketHistoryEntry {
   player: {
     id: string
@@ -238,13 +196,6 @@ export interface MarketHistoryEntry {
   date: string
   operation: string
   money: number
-}
-
-export interface MarketValueHistory {
-  lfpId: number
-  marketValue: number
-  date: string
-  bids: number
 }
 
 export interface UserRegion {

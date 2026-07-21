@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: 'La Liga Fantasy Market Analyzer',
-  description: 'Analyze your La Liga fantasy football team and market trends',
+  description:
+    'Review your La Liga Fantasy squad, league activity, and market opportunities',
 }
 
 export const dynamic = 'force-dynamic'

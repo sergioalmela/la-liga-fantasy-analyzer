@@ -11,8 +11,9 @@ import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
 import { leagueService } from '@/services/league-service'
 import {
-  PlayerAnalyticsService,
-  playerAnalyticsService,
+  calculateSummaryStats,
+  getPlayersWithExpiringProtection,
+  getPlayersWithLowBuyout,
 } from '@/services/player-analytics-service'
 import { teamService } from '@/services/team-service'
 import { sortOpportunities } from '@/utils/player-sorting-utils'
@@ -60,16 +61,7 @@ export default function PlayerOpportunitiesPage() {
                 }))
               })
 
-            const expiringOpponentPlayers =
-              PlayerAnalyticsService.getPlayersWithExpiringProtection(
-                allOpponentPlayersWithOwner
-              )
-            const enrichedOpponentPlayers =
-              await playerAnalyticsService.enrichPlayersWithAnalysis(
-                expiringOpponentPlayers
-              )
-
-            setOpponentPlayers(enrichedOpponentPlayers)
+            setOpponentPlayers(allOpponentPlayersWithOwner)
           }
         }
       } catch {
@@ -82,14 +74,10 @@ export default function PlayerOpportunitiesPage() {
     loadPlayers()
   }, [leagueId, teamId])
 
-  const playersWithOpportunities =
-    PlayerAnalyticsService.getPlayersWithLowBuyout(opponentPlayers)
+  const playersWithOpportunities = getPlayersWithLowBuyout(opponentPlayers)
   const playersWithExpiringProtection =
-    PlayerAnalyticsService.getPlayersWithExpiringProtection(opponentPlayers)
-  const summaryStats =
-    PlayerAnalyticsService.calculateSummaryStats(opponentPlayers)
-  const trendingUpPlayers =
-    PlayerAnalyticsService.getTrendingUpPlayers(opponentPlayers)
+    getPlayersWithExpiringProtection(opponentPlayers)
+  const summaryStats = calculateSummaryStats(opponentPlayers)
 
   return (
     <AuthGuard>
@@ -103,8 +91,8 @@ export default function PlayerOpportunitiesPage() {
                 Player Opportunities
               </h1>
               <p className="mt-2 text-gray-600">
-                Discover buying opportunities from other managers' players with
-                trend analysis
+                Discover buying opportunities using clauses and protection
+                windows from other managers' players
               </p>
             </div>
 
@@ -153,9 +141,11 @@ export default function PlayerOpportunitiesPage() {
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-2xl font-bold text-purple-600">
-                        {trendingUpPlayers.length}
+                        {playersWithExpiringProtection.length}
                       </div>
-                      <p className="text-sm text-gray-600">Trending Up</p>
+                      <p className="text-sm text-gray-600">
+                        Protection Expiring
+                      </p>
                     </CardContent>
                   </Card>
                   <Card>

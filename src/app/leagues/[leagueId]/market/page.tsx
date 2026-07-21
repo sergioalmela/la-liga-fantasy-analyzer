@@ -8,7 +8,6 @@ import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
-import { playerAnalyticsService } from '@/services/player-analytics-service'
 import { teamService } from '@/services/team-service'
 import { sortOpportunities } from '@/utils/player-sorting-utils'
 
@@ -27,11 +26,7 @@ export default function MarketPlayersPage() {
         if (result.error) {
           setError(result.error)
         } else {
-          const enrichedPlayers =
-            await playerAnalyticsService.enrichPlayersWithAnalysis(
-              result.data || []
-            )
-          setPlayers(enrichedPlayers)
+          setPlayers(result.data || [])
         }
       } catch {
         setError('Failed to load players')
