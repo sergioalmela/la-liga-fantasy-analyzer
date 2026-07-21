@@ -1,5 +1,12 @@
 import type { Player } from '../entities/player'
-import type { League, LeagueRanking } from '../types/api'
+import type {
+  ActivityPlayer,
+  CurrentWeek,
+  League,
+  LeagueActivity,
+  LeagueRanking,
+  TeamMoney,
+} from '../types/api'
 
 type JsonRecord = Record<string, unknown>
 
@@ -57,6 +64,104 @@ export function parseTeamsMaster(
   }
 
   return { data: teams, error: null }
+}
+
+export function parseLeagueActivity(
+  value: unknown
+): ContractResult<LeagueActivity[]> {
+  const entries = unwrapArray(value, ['elements'])
+  if (!entries) return { data: null, error: 'Invalid activity response' }
+
+  const activity: LeagueActivity[] = []
+  for (const entry of entries) {
+    if (!isRecord(entry)) {
+      return { data: null, error: 'Invalid activity entry' }
+    }
+
+    const id = asString(entry.id)
+    const activityTypeId = asNumber(entry.activityTypeId)
+    const createdAt = asString(entry.createdAt ?? entry.timestamp)
+    const user1Id = asString(entry.user1Id)
+    const user2Id = asString(entry.user2Id)
+    const playerMasterId = asString(entry.playerMasterId ?? entry.playerId)
+    const amount = asNumber(entry.amount)
+    const weekNumber = asNumber(entry.weekNumber)
+    if (!id || activityTypeId === null || !createdAt) {
+      return { data: null, error: 'Invalid activity entry' }
+    }
+
+    activity.push({
+      id,
+      activityTypeId,
+      createdAt,
+      ...(user1Id ? { user1Id } : {}),
+      ...(user2Id ? { user2Id } : {}),
+      ...(playerMasterId ? { playerMasterId } : {}),
+      ...(amount !== null ? { amount } : {}),
+      ...(weekNumber !== null ? { weekNumber } : {}),
+    })
+  }
+
+  return { data: activity, error: null }
+}
+
+export function parseActivityPlayers(
+  value: unknown
+): ContractResult<ActivityPlayer[]> {
+  const entries = unwrapArray(value, ['elements'])
+  if (!entries) return { data: null, error: 'Invalid players response' }
+
+  const players: ActivityPlayer[] = []
+  for (const entry of entries) {
+    if (!isRecord(entry)) return { data: null, error: 'Invalid player entry' }
+
+    const id = asString(entry.id)
+    const name = asString(entry.nickname) ?? asString(entry.name)
+    if (!id || !name) return { data: null, error: 'Invalid player entry' }
+    players.push({ id, name })
+  }
+
+  return { data: players, error: null }
+}
+
+export function parseTeamMoney(value: unknown): ContractResult<TeamMoney> {
+  if (!isRecord(value)) return { data: null, error: 'Invalid money response' }
+
+  const teamMoney = asNumber(value.teamMoney)
+  const teamInvestment = asNumber(value.teamInvestment)
+  if (teamMoney === null || teamInvestment === null) {
+    return { data: null, error: 'Invalid money response' }
+  }
+
+  return { data: { teamMoney, teamInvestment }, error: null }
+}
+
+export function parseCurrentWeek(value: unknown): ContractResult<CurrentWeek> {
+  if (!isRecord(value)) return { data: null, error: 'Invalid week response' }
+
+  const weekNumber = asNumber(value.weekNumber)
+  const nextWeek = asNumber(value.nextWeek)
+  const openingWeekDate = asString(value.openingWeekDate)
+  const closingWeekDate = asString(value.closingWeekDate)
+  if (
+    weekNumber === null ||
+    nextWeek === null ||
+    !openingWeekDate ||
+    !closingWeekDate
+  ) {
+    return { data: null, error: 'Invalid week response' }
+  }
+
+  return {
+    data: {
+      isLive: value.isLive === true,
+      weekNumber,
+      nextWeek,
+      openingWeekDate,
+      closingWeekDate,
+    },
+    error: null,
+  }
 }
 
 export function parseLeagues(value: unknown): ContractResult<League[]> {

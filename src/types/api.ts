@@ -278,6 +278,30 @@ export interface TeamMoney {
   teamInvestment: number
 }
 
+export interface LeagueActivity {
+  id: string
+  activityTypeId: number
+  createdAt: string
+  user1Id?: string
+  user2Id?: string
+  playerMasterId?: string
+  amount?: number
+  weekNumber?: number
+}
+
+export interface ActivityPlayer {
+  id: string
+  name: string
+}
+
+export interface CurrentWeek {
+  isLive: boolean
+  nextWeek: number
+  weekNumber: number
+  openingWeekDate: string
+  closingWeekDate: string
+}
+
 export interface TeamLineUp {
   formation: {
     goalkeeper: PlayerPosition[]

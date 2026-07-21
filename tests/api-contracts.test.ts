@@ -4,11 +4,16 @@ import {
   getAllowedFantasyPath,
   preserveUpstreamResponse,
 } from '../src/lib/fantasy-proxy.ts'
+import { buildActivityRadar } from '../src/services/activity-service.ts'
 import { ApiClient } from '../src/services/api-client.ts'
 import {
+  parseActivityPlayers,
+  parseCurrentWeek,
+  parseLeagueActivity,
   parseLeagueRanking,
   parseLeagues,
   parseOfficialMarketPlayers,
+  parseTeamMoney,
   parseTeamPlayers,
   parseTeamsMaster,
 } from '../src/services/api-contracts.ts'
@@ -110,6 +115,106 @@ test('keeps only official league-market players', () => {
   assert.equal(result.data?.length, 1)
   assert.equal(result.data?.[0].saleInfo?.numberOfOffers, 2)
   assert.equal(result.data?.[0].team.name, 'Example FC')
+})
+
+test('normalizes activity, budget and current week contracts', () => {
+  const activity = parseLeagueActivity([
+    {
+      id: 1,
+      activityTypeId: '31',
+      user1Id: 10,
+      user2Id: 20,
+      playerMasterId: 68,
+      amount: '12000000',
+      createdAt: '2026-07-21T10:00:00Z',
+    },
+  ])
+  const money = parseTeamMoney({
+    teamMoney: '30000000',
+    teamInvestment: 40000000,
+  })
+  const week = parseCurrentWeek({
+    isLive: false,
+    weekNumber: 1,
+    nextWeek: 2,
+    openingWeekDate: '2026-08-15T19:30:00+02:00',
+    closingWeekDate: '2026-08-20T03:00:00+02:00',
+  })
+
+  assert.equal(activity.error, null)
+  assert.equal(activity.data?.[0].user1Id, '10')
+  assert.equal(activity.data?.[0].amount, 12000000)
+  assert.equal(money.data?.teamMoney, 30000000)
+  assert.equal(week.data?.weekNumber, 1)
+})
+
+test('builds an enriched read-only activity radar', () => {
+  const ranking = parseLeagueRanking([
+    {
+      position: 1,
+      team: {
+        id: 100,
+        teamPoints: 0,
+        manager: { id: 10, managerName: 'Buyer' },
+      },
+    },
+    {
+      position: 2,
+      team: {
+        id: 200,
+        teamPoints: 0,
+        manager: { id: 20, managerName: 'Seller' },
+      },
+    },
+  ])
+  const players = parseActivityPlayers([{ id: 68, nickname: 'Goalkeeper' }])
+  assert.ok(ranking.data)
+  assert.ok(players.data)
+
+  const radar = buildActivityRadar(
+    [
+      {
+        id: 'activity-1',
+        activityTypeId: 31,
+        createdAt: '2026-07-21T10:00:00Z',
+        user1Id: '10',
+        user2Id: '20',
+        playerMasterId: '68',
+        amount: 12000000,
+      },
+      {
+        id: 'activity-2',
+        activityTypeId: 6,
+        createdAt: '2026-07-20T10:00:00Z',
+        user1Id: '10',
+        amount: 2000000,
+      },
+    ],
+    ranking.data,
+    players.data,
+    { teamMoney: 30000000, teamInvestment: 40000000 },
+    {
+      isLive: false,
+      weekNumber: 1,
+      nextWeek: 2,
+      openingWeekDate: '2026-08-15T19:30:00+02:00',
+      closingWeekDate: '2026-08-20T03:00:00+02:00',
+    }
+  )
+
+  assert.equal(radar.activities[0].actorName, 'Buyer')
+  assert.equal(radar.activities[0].counterpartyName, 'Seller')
+  assert.equal(radar.activities[0].playerName, 'Goalkeeper')
+  assert.equal(radar.totalVolume, 14000000)
+  assert.deepEqual(radar.managerSummaries, [
+    {
+      managerName: 'Buyer',
+      activityCount: 2,
+      earned: 2000000,
+      spent: 12000000,
+    },
+    { managerName: 'Seller', activityCount: 0, earned: 12000000, spent: 0 },
+  ])
 })
 
 test('proxy allowlist rejects external URLs and legacy endpoints', () => {

@@ -35,6 +35,9 @@ export const endpoints = {
   stats: {
     weekMatches: (weekId: string) => `/stats${CMP}/stats/week/${weekId}`,
   },
+  season: {
+    currentWeek: `${CMP}/week/current`,
+  },
 }
 
 function getErrorMessage(data: unknown, status: number): string {
