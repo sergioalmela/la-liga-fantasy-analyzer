@@ -39,3 +39,22 @@ export function getTokenLifetimeSeconds(
 
   return Math.max(0, Math.floor(expiration - now / 1000))
 }
+
+export function isValidProviderToken(
+  token: string,
+  expectedAudience: string,
+  expectedIssuer: string,
+  now = Date.now()
+): boolean {
+  const payload = getTokenPayload(token)
+  const lifetime = getTokenLifetimeSeconds(token, now)
+  const notBefore = payload?.nbf
+  const nowSeconds = Math.floor(now / 1000)
+
+  return Boolean(
+    lifetime &&
+      payload?.aud === expectedAudience &&
+      payload.iss === expectedIssuer &&
+      (typeof notBefore !== 'number' || notBefore <= nowSeconds + 60)
+  )
+}

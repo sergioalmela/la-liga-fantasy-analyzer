@@ -2,14 +2,14 @@ import { type NextRequest, NextResponse } from 'next/server'
 import {
   AUTH_COOKIE_NAME,
   getTokenLifetimeSeconds,
-  getTokenPayload,
+  isValidProviderToken,
 } from '@/lib/auth-session'
 
 const CLIENT_ID = 'af88bcff-1157-40a0-b579-030728aacf0b'
 const TOKEN_URL =
   'https://login.laliga.es/laligadspprob2c.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1A_ResourceOwnerv2'
 const EXPECTED_ISSUER =
-  'https://login.laliga.es/335316eb-f606-4361-bb86-35a7edddcec1/v2.0/'
+  'https://login.laliga.es/335316eb-f606-4361-bb86-35a7edcdcec1/v2.0/'
 const MAX_BODY_BYTES = 8 * 1024
 
 function noStoreJson(body: unknown, status = 200): NextResponse {
@@ -91,15 +91,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return noStoreJson({ error: 'Authentication provider failed' }, 502)
     }
 
-    const tokenPayload = getTokenPayload(accessToken)
     const maxAge = getTokenLifetimeSeconds(accessToken)
-    const notBefore = tokenPayload?.nbf
-    const now = Math.floor(Date.now() / 1000)
     if (
       !maxAge ||
-      tokenPayload?.aud !== CLIENT_ID ||
-      tokenPayload.iss !== EXPECTED_ISSUER ||
-      (typeof notBefore === 'number' && notBefore > now + 60)
+      !isValidProviderToken(accessToken, CLIENT_ID, EXPECTED_ISSUER)
     ) {
       return noStoreJson({ error: 'Authentication provider failed' }, 502)
     }

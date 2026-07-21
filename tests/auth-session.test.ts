@@ -5,12 +5,16 @@ import {
   getTokenExpiration,
   getTokenLifetimeSeconds,
   getTokenPayload,
+  isValidProviderToken,
 } from '../src/lib/auth-session.ts'
 
-function createToken(expiration: number): string {
+function createToken(
+  expiration: number,
+  claims: Record<string, unknown> = {}
+): string {
   const encode = (value: unknown) =>
     Buffer.from(JSON.stringify(value)).toString('base64url')
-  return `${encode({ alg: 'none' })}.${encode({ exp: expiration })}.signature`
+  return `${encode({ alg: 'none' })}.${encode({ exp: expiration, ...claims })}.signature`
 }
 
 test('reads JWT expiration and rejects malformed tokens', () => {
@@ -24,6 +28,24 @@ test('calculates remaining token lifetime without returning negatives', () => {
   const now = 1_900_000_000_000
   assert.equal(getTokenLifetimeSeconds(createToken(1_900_000_060), now), 60)
   assert.equal(getTokenLifetimeSeconds(createToken(1_899_999_999), now), 0)
+})
+
+test('validates the current LALIGA provider claims', () => {
+  const now = 1_900_000_000_000
+  const audience = 'af88bcff-1157-40a0-b579-030728aacf0b'
+  const issuer =
+    'https://login.laliga.es/335316eb-f606-4361-bb86-35a7edcdcec1/v2.0/'
+  const token = createToken(1_900_000_060, {
+    aud: audience,
+    iss: issuer,
+    nbf: 1_900_000_000,
+  })
+
+  assert.equal(isValidProviderToken(token, audience, issuer, now), true)
+  assert.equal(
+    isValidProviderToken(token, audience, issuer.replace('edc', 'edd'), now),
+    false
+  )
 })
 
 test('login returns only session state and sends credentials to the BFF', async (context) => {
