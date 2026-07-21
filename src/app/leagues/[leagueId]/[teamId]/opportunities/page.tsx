@@ -9,7 +9,6 @@ import { PlayerCard } from '@/components/player/player-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
-import { getAuthToken } from '@/lib/auth'
 import { leagueService } from '@/services/league-service'
 import {
   PlayerAnalyticsService,
@@ -29,11 +28,8 @@ export default function PlayerOpportunitiesPage() {
 
   useEffect(() => {
     const loadPlayers = async () => {
-      const token = getAuthToken()
-      if (!token) return
-
       try {
-        const usersResult = await leagueService.getUsers(token, leagueId)
+        const usersResult = await leagueService.getUsers(leagueId)
 
         if (usersResult.error) {
           setError(usersResult.error)
@@ -46,7 +42,7 @@ export default function PlayerOpportunitiesPage() {
           if (opponentUsers.length > 0) {
             const opponentPlayersResults = await Promise.all(
               opponentUsers.map((user) =>
-                teamService.getPlayers(token, leagueId, user.team.id.toString())
+                teamService.getPlayers(leagueId, user.team.id.toString())
               )
             )
 
@@ -70,7 +66,6 @@ export default function PlayerOpportunitiesPage() {
               )
             const enrichedOpponentPlayers =
               await playerAnalyticsService.enrichPlayersWithAnalysis(
-                token,
                 expiringOpponentPlayers
               )
 

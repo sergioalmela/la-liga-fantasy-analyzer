@@ -8,7 +8,6 @@ export class MarketService {
    * Withdraws a player from the market
    */
   async withdrawPlayer(
-    _cookie: string,
     _leagueId: string,
     _marketId: string
   ): Promise<ApiResponse<unknown>> {
@@ -19,7 +18,6 @@ export class MarketService {
    * Sells a player to the market
    */
   async sellPlayer(
-    _cookie: string,
     _leagueId: string,
     _playerId: string,
     _salePrice: number
@@ -31,7 +29,6 @@ export class MarketService {
    * Re-markets all players by withdrawing them and putting them back at the same price
    */
   async remarketPlayers(
-    cookie: string,
     leagueId: string,
     players: Array<{
       playerId: string
@@ -55,7 +52,6 @@ export class MarketService {
       try {
         // Step 1: Withdraw player from market
         const withdrawResult = await this.withdrawPlayer(
-          cookie,
           leagueId,
           player.marketId
         )
@@ -72,7 +68,6 @@ export class MarketService {
 
         // Step 2: Re-sell player to market
         const sellResult = await this.sellPlayer(
-          cookie,
           leagueId,
           player.playerId,
           player.salePrice

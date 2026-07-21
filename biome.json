@@ -9,7 +9,8 @@
     "ignoreUnknown": false,
     "includes": [
       "src/**/*.{ts,tsx,js,jsx}",
-      "*.{ts,tsx,js,jsx}",
+      "tests/**/*.{ts,tsx,js,jsx}",
+      "*.{json,jsonc,ts,tsx,js,jsx}",
       "!next-env.d.ts"
     ]
   },

@@ -8,10 +8,15 @@ export default function Home() {
   const router = useRouter()
 
   useEffect(() => {
-    if (isAuthenticated()) {
-      router.push('/leagues')
-    } else {
-      router.push('/login')
+    let active = true
+
+    void isAuthenticated().then((authenticated) => {
+      if (!active) return
+      router.replace(authenticated ? '/leagues' : '/login')
+    })
+
+    return () => {
+      active = false
     }
   }, [router])
 

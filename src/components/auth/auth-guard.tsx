@@ -13,10 +13,21 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter()
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.push('/login')
-    } else {
+    let active = true
+
+    void isAuthenticated().then((authenticated) => {
+      if (!active) return
+
+      if (!authenticated) {
+        router.replace('/login')
+        return
+      }
+
       setLoading(false)
+    })
+
+    return () => {
+      active = false
     }
   }, [router])
 

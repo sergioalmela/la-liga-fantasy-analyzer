@@ -4,7 +4,7 @@ import { LogOut, Trophy } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { removeAuthToken } from '@/lib/auth'
+import { logout } from '@/lib/auth'
 
 const navigation = [{ name: 'Leagues', href: '/leagues', icon: Trophy }]
 
@@ -12,9 +12,10 @@ export function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
 
-  const handleLogout = () => {
-    removeAuthToken()
-    router.push('/login')
+  const handleLogout = async () => {
+    await logout()
+    router.replace('/login')
+    router.refresh()
   }
 
   return (

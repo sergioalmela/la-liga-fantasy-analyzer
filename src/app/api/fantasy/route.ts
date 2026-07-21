@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server'
+import { AUTH_COOKIE_NAME } from '@/lib/auth-session'
 import {
   getAllowedFantasyPath,
   preserveUpstreamResponse,
@@ -28,7 +29,10 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
   }
 
   try {
-    const authHeader = request.headers.get('authorization')
+    const sessionToken = request.cookies.get(AUTH_COOKIE_NAME)?.value
+    const authHeader =
+      request.headers.get('authorization') ||
+      (sessionToken ? `Bearer ${sessionToken}` : null)
     const body = method === 'GET' ? undefined : await request.text()
 
     if (

@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
-import { getAuthToken } from '@/lib/auth'
 import { marketService } from '@/services/market-service'
 import {
   PlayerAnalyticsService,
@@ -33,18 +32,14 @@ export default function TeamPlayersPage() {
 
   useEffect(() => {
     const loadPlayers = async () => {
-      const token = getAuthToken()
-      if (!token) return
-
       try {
-        const result = await teamService.getPlayers(token, leagueId, teamId)
+        const result = await teamService.getPlayers(leagueId, teamId)
 
         if (result.error) {
           setError(result.error)
         } else {
           const enrichedPlayers =
             await playerAnalyticsService.enrichPlayersWithAnalysis(
-              token,
               result.data || []
             )
           setPlayers(enrichedPlayers)
@@ -60,9 +55,6 @@ export default function TeamPlayersPage() {
   }, [leagueId, teamId])
 
   const handleRemarketAll = async () => {
-    const token = getAuthToken()
-    if (!token) return
-
     const playersInMarket = players.filter((p) => p.saleInfo)
     const playersNotInMarket = players.filter((p) => !p.saleInfo)
 
@@ -92,7 +84,6 @@ export default function TeamPlayersPage() {
 
           // Step 1: Withdraw player from market
           const withdrawResult = await marketService.withdrawPlayer(
-            token,
             leagueId,
             player.saleInfo.marketId
           )
@@ -110,7 +101,6 @@ export default function TeamPlayersPage() {
           // Step 2: Re-sell player to market at same price
           const playerIdToSell = player.playerTeamId || player.id
           const sellResult = await marketService.sellPlayer(
-            token,
             leagueId,
             playerIdToSell,
             player.marketValue
@@ -141,7 +131,6 @@ export default function TeamPlayersPage() {
 
         try {
           const sellResult = await marketService.sellPlayer(
-            token,
             leagueId,
             playerIdToSell,
             salePrice
@@ -172,15 +161,10 @@ export default function TeamPlayersPage() {
       setRemarketMessage(message)
 
       // Reload players to reflect changes
-      const updatedResult = await teamService.getPlayers(
-        token,
-        leagueId,
-        teamId
-      )
+      const updatedResult = await teamService.getPlayers(leagueId, teamId)
       if (updatedResult.data) {
         const enrichedPlayers =
           await playerAnalyticsService.enrichPlayersWithAnalysis(
-            token,
             updatedResult.data
           )
         setPlayers(enrichedPlayers)

@@ -8,7 +8,6 @@ import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
-import { getAuthToken } from '@/lib/auth'
 import { playerAnalyticsService } from '@/services/player-analytics-service'
 import { teamService } from '@/services/team-service'
 import { sortOpportunities } from '@/utils/player-sorting-utils'
@@ -22,21 +21,14 @@ export default function MarketPlayersPage() {
 
   useEffect(() => {
     const loadPlayers = async () => {
-      const token = getAuthToken()
-      if (!token) return
-
       try {
-        const result = await teamService.getOfficialMarketPlayers(
-          token,
-          leagueId
-        )
+        const result = await teamService.getOfficialMarketPlayers(leagueId)
 
         if (result.error) {
           setError(result.error)
         } else {
           const enrichedPlayers =
             await playerAnalyticsService.enrichPlayersWithAnalysis(
-              token,
               result.data || []
             )
           setPlayers(enrichedPlayers)

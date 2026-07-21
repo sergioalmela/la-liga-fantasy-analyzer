@@ -7,7 +7,6 @@ import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { getAuthToken } from '@/lib/auth'
 import { leagueService } from '@/services/league-service'
 import { type League } from '@/types/api'
 
@@ -18,11 +17,8 @@ export default function LeaguesPage() {
 
   useEffect(() => {
     const loadLeagues = async () => {
-      const token = getAuthToken()
-      if (!token) return
-
       try {
-        const result = await leagueService.getLeagues(token)
+        const result = await leagueService.getLeagues()
 
         if (result.error) {
           setError(result.error)

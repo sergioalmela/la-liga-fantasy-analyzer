@@ -9,13 +9,12 @@ import { ApiResponse } from '@/types/api'
 
 export class TeamService {
   async getPlayers(
-    cookie: string,
     leagueId: string,
     teamId: string
   ): Promise<ApiResponse<Player[]>> {
     const url = `${endpoints.league.team(teamId, leagueId)}?x-lang=es`
 
-    const result = await apiClient.get<unknown>(url, cookie)
+    const result = await apiClient.get<unknown>(url)
     if (result.error) {
       return { data: null, error: result.error, status: result.status }
     }
@@ -25,14 +24,13 @@ export class TeamService {
   }
 
   async getOfficialMarketPlayers(
-    cookie: string,
     leagueId: string
   ): Promise<ApiResponse<Player[]>> {
     const url = `${endpoints.league.market(leagueId)}?x-lang=es`
 
     const [marketResult, teamsResult] = await Promise.all([
-      apiClient.get<unknown>(url, cookie),
-      apiClient.get<unknown>(`${endpoints.team.master}?x-lang=es`, cookie),
+      apiClient.get<unknown>(url),
+      apiClient.get<unknown>(`${endpoints.team.master}?x-lang=es`),
     ])
     if (marketResult.error) {
       return {

@@ -3,11 +3,8 @@ import { parseLeagueRanking, parseLeagues } from '@/services/api-contracts'
 import { ApiResponse, League, LeagueRanking } from '@/types/api'
 
 export class LeagueService {
-  async getLeagues(cookie: string): Promise<ApiResponse<League[]>> {
-    const response = await apiClient.get<unknown>(
-      endpoints.user.leagues,
-      cookie
-    )
+  async getLeagues(): Promise<ApiResponse<League[]>> {
+    const response = await apiClient.get<unknown>(endpoints.user.leagues)
     if (response.error) {
       return {
         data: null,
@@ -20,13 +17,10 @@ export class LeagueService {
     return { ...parsed, status: response.status }
   }
 
-  async getUsers(
-    cookie: string,
-    leagueId: string
-  ): Promise<ApiResponse<LeagueRanking[]>> {
+  async getUsers(leagueId: string): Promise<ApiResponse<LeagueRanking[]>> {
     const leagueRankingUrl = `${endpoints.league.ranking(leagueId)}?x-lang=es`
 
-    const response = await apiClient.get<unknown>(leagueRankingUrl, cookie)
+    const response = await apiClient.get<unknown>(leagueRankingUrl)
     if (response.error) {
       return {
         data: null,

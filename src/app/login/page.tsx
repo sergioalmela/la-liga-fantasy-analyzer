@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useId, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { getToken, setAuthToken } from '@/lib/auth'
+import { login } from '@/lib/auth'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -26,20 +26,21 @@ export default function LoginPage() {
         return
       }
 
-      const token = await getToken(email, password)
+      const result = await login(email, password)
 
-      if (!token) {
-        setError('Invalid credentials.')
+      if (!result.authenticated) {
+        setError(result.error || 'Invalid credentials.')
         return
       }
 
-      setAuthToken(token)
-      router.push('/leagues')
+      router.replace('/leagues')
+      router.refresh()
     } catch {
       setError(
         'Authentication failed. Please check your credentials and try again.'
       )
     } finally {
+      setPassword('')
       setLoading(false)
     }
   }
@@ -130,8 +131,9 @@ export default function LoginPage() {
               <p className="text-xs text-blue-700">
                 This app uses your La Liga Fantasy credentials to access your
                 team data, analyze player trends, track market opportunities,
-                and monitor buyout clauses. Your credentials are only used to
-                authenticate with La Liga's official API.
+                and monitor buyout clauses. Your password is forwarded once to
+                La Liga's login service and is not stored. The resulting session
+                token is kept in an HttpOnly cookie.
               </p>
             </div>
           </CardContent>

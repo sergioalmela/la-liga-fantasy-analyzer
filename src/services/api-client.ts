@@ -49,14 +49,13 @@ function getErrorMessage(data: unknown, status: number): string {
 export class ApiClient {
   private async makeRequest<T>(
     endpoint: string,
-    token: string,
     options: {
       method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
       body?: unknown
     } = {}
   ): Promise<ApiResponse<T>> {
     try {
-      const headers = new Headers({ Authorization: `Bearer ${token}` })
+      const headers = new Headers()
       if (options.body !== undefined)
         headers.set('Content-Type', 'application/json')
 
@@ -65,6 +64,7 @@ export class ApiClient {
         {
           method: options.method || 'GET',
           headers,
+          credentials: 'same-origin',
           ...(options.body !== undefined
             ? { body: JSON.stringify(options.body) }
             : {}),
@@ -103,28 +103,20 @@ export class ApiClient {
     }
   }
 
-  async get<T>(endpoint: string, token: string): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>(endpoint, token, { method: 'GET' })
+  async get<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(endpoint, { method: 'GET' })
   }
 
-  async post<T>(
-    endpoint: string,
-    token: string,
-    body?: unknown
-  ): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>(endpoint, token, { method: 'POST', body })
+  async post<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(endpoint, { method: 'POST', body })
   }
 
-  async put<T>(
-    endpoint: string,
-    token: string,
-    body?: unknown
-  ): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>(endpoint, token, { method: 'PUT', body })
+  async put<T>(endpoint: string, body?: unknown): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(endpoint, { method: 'PUT', body })
   }
 
-  async delete<T>(endpoint: string, token: string): Promise<ApiResponse<T>> {
-    return this.makeRequest<T>(endpoint, token, { method: 'DELETE' })
+  async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
+    return this.makeRequest<T>(endpoint, { method: 'DELETE' })
   }
 }
 

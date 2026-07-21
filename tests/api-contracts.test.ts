@@ -1,17 +1,17 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
-  parseLeagueRanking,
-  parseLeagues,
-  parseOfficialMarketPlayers,
-  parseTeamsMaster,
-  parseTeamPlayers,
-} from '../src/services/api-contracts.ts'
-import { ApiClient } from '../src/services/api-client.ts'
-import {
   getAllowedFantasyPath,
   preserveUpstreamResponse,
 } from '../src/lib/fantasy-proxy.ts'
+import { ApiClient } from '../src/services/api-client.ts'
+import {
+  parseLeagueRanking,
+  parseLeagues,
+  parseOfficialMarketPlayers,
+  parseTeamPlayers,
+  parseTeamsMaster,
+} from '../src/services/api-contracts.ts'
 
 const playerMaster = {
   id: '68',
@@ -87,21 +87,24 @@ test('keeps only official league-market players', () => {
   const teams = parseTeamsMaster([{ id: 3, name: 'Example FC' }])
   assert.equal(teams.error, null)
 
-  const result = parseOfficialMarketPlayers([
-    {
-      id: 200,
-      discr: 'marketPlayerLeague',
-      salePrice: '35000000',
-      expirationDate: '2026-07-22T12:00:00Z',
-      numberOfBids: '2',
-      playerMaster: {
-        ...playerMaster,
-        team: undefined,
-        teamId: 3,
+  const result = parseOfficialMarketPlayers(
+    [
+      {
+        id: 200,
+        discr: 'marketPlayerLeague',
+        salePrice: '35000000',
+        expirationDate: '2026-07-22T12:00:00Z',
+        numberOfBids: '2',
+        playerMaster: {
+          ...playerMaster,
+          team: undefined,
+          teamId: 3,
+        },
       },
-    },
-    { id: 201, discr: 'marketPlayerTeam' },
-  ], teams.data ?? new Map())
+      { id: 201, discr: 'marketPlayerTeam' },
+    ],
+    teams.data ?? new Map()
+  )
 
   assert.equal(result.error, null)
   assert.equal(result.data?.length, 1)
@@ -128,10 +131,7 @@ test('proxy allowlist rejects external URLs and legacy endpoints', () => {
     null
   )
   assert.equal(getAllowedFantasyPath('/v4/leagues', 'GET'), null)
-  assert.equal(
-    getAllowedFantasyPath('/v1/competition/1/leagues', 'POST'),
-    null
-  )
+  assert.equal(getAllowedFantasyPath('/v1/competition/1/leagues', 'POST'), null)
 })
 
 test('proxy response preserves upstream error statuses and bodies', async () => {
@@ -165,13 +165,16 @@ test('API client exposes the upstream status and message', async (context) => {
     globalThis.fetch = originalFetch
   })
 
-  globalThis.fetch = async () =>
-    Response.json(
+  globalThis.fetch = async (_input, init) => {
+    assert.equal(init?.credentials, 'same-origin')
+    assert.equal(new Headers(init?.headers).has('Authorization'), false)
+    return Response.json(
       { message: 'Authentication is required.' },
       { status: 401 }
     )
+  }
 
-  const result = await new ApiClient().get('/v1/competition/1/leagues', 'token')
+  const result = await new ApiClient().get('/v1/competition/1/leagues')
   assert.deepEqual(result, {
     data: null,
     error: 'Authentication is required.',

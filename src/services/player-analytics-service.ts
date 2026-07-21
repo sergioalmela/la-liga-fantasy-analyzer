@@ -3,7 +3,6 @@ import { ApiResponse, MarketValuePoint } from '@/types/api'
 
 export class PlayerAnalyticsService {
   async getPlayerMarketTrend(
-    _cookie: string,
     _playerId: string
   ): Promise<ApiResponse<MarketValuePoint[]>> {
     return {
@@ -45,11 +44,8 @@ export class PlayerAnalyticsService {
     return Number.parseFloat((momentum + shortTrend + weeklyContext).toFixed(2))
   }
 
-  async enrichPlayerWithAnalysis(
-    cookie: string,
-    player: Player
-  ): Promise<Player> {
-    const marketTrendResult = await this.getPlayerMarketTrend(cookie, player.id)
+  async enrichPlayerWithAnalysis(player: Player): Promise<Player> {
+    const marketTrendResult = await this.getPlayerMarketTrend(player.id)
 
     if (!marketTrendResult.data) {
       return player
@@ -72,12 +68,9 @@ export class PlayerAnalyticsService {
     }
   }
 
-  async enrichPlayersWithAnalysis(
-    cookie: string,
-    players: Player[]
-  ): Promise<Player[]> {
+  async enrichPlayersWithAnalysis(players: Player[]): Promise<Player[]> {
     return await Promise.all(
-      players.map((player) => this.enrichPlayerWithAnalysis(cookie, player))
+      players.map((player) => this.enrichPlayerWithAnalysis(player))
     )
   }
 

@@ -2,6 +2,7 @@
   "name": "liga-fantasy-market-analyzer",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@11.15.1",
   "engines": {
     "node": ">=20.9.0"
@@ -14,7 +15,7 @@
     "format": "biome format --write .",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "test": "node --test --experimental-strip-types tests/api-contracts.test.ts"
+    "test": "node --test --experimental-strip-types tests/*.test.ts"
   },
   "dependencies": {
     "date-fns": "^4.4.0",
