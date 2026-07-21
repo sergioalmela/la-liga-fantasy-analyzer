@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { AUTH_COOKIE_NAME, getTokenLifetimeSeconds } from '@/lib/auth-session'
+import { isSameOriginRequest } from '@/lib/request-origin'
 
 function response(authenticated: boolean): NextResponse {
   return NextResponse.json(
@@ -21,8 +22,7 @@ export function GET(request: NextRequest): NextResponse {
 }
 
 export function DELETE(request: NextRequest): NextResponse {
-  const origin = request.headers.get('origin')
-  if (origin && origin !== request.nextUrl.origin) {
+  if (!isSameOriginRequest(request, true)) {
     return NextResponse.json(
       { error: 'Request origin is not allowed' },
       { status: 403, headers: { 'Cache-Control': 'no-store' } }

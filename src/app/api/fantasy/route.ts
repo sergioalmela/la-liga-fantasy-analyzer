@@ -5,13 +5,10 @@ import {
   preserveUpstreamResponse,
   validateFantasyRequestBody,
 } from '@/lib/fantasy-proxy'
+import { isSameOriginRequest } from '@/lib/request-origin'
 
 const API_BASE_URL = 'https://fantasy-api.llt-services.com/api'
 const MAX_REQUEST_BODY_BYTES = 64 * 1024
-
-function isSameOrigin(request: NextRequest): boolean {
-  return request.headers.get('origin') === request.nextUrl.origin
-}
 
 async function proxyRequest(request: NextRequest): Promise<Response> {
   const method = request.method.toUpperCase()
@@ -25,7 +22,7 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
     )
   }
 
-  if (method !== 'GET' && !isSameOrigin(request)) {
+  if (method !== 'GET' && !isSameOriginRequest(request)) {
     return Response.json(
       { error: 'Request origin is not allowed' },
       { status: 403 }
