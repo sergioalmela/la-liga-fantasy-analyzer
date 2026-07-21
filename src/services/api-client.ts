@@ -43,6 +43,8 @@ export const endpoints = {
   },
   season: {
     currentWeek: `${CMP}/week/current`,
+    calendar: (weekNumber: number) =>
+      `${CMP}/calendar?weekNumber=${weekNumber}&x-lang=es`,
   },
 }
 

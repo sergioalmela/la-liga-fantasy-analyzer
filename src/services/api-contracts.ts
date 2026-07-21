@@ -7,10 +7,24 @@ import type {
   LeagueRanking,
   TeamMoney,
 } from '../types/api'
+import type {
+  CalendarMatch,
+  FantasyUserProfile,
+  LineupPlayer,
+  LineupSnapshot,
+  MatchStats,
+  PlayerDetail,
+  PlayerSeasonSummary,
+  PlayerWeeklyStat,
+  RankingEvolution,
+} from '../types/dashboard.ts'
 
 type JsonRecord = Record<string, unknown>
 
-export type TeamMasterLookup = Map<string, { id: string; name: string }>
+export type TeamMasterLookup = Map<
+  string,
+  { id: string; name: string; shortName?: string }
+>
 
 export type ContractResult<T> =
   | { data: T; error: null }
@@ -60,7 +74,8 @@ export function parseTeamsMaster(
     const name = asString(entry.name)
     if (!id || !name) return { data: null, error: 'Invalid team entry' }
 
-    teams.set(id, { id, name })
+    const shortName = asString(entry.shortName)
+    teams.set(id, { id, name, ...(shortName ? { shortName } : {}) })
   }
 
   return { data: teams, error: null }
@@ -383,4 +398,345 @@ export function parseOfficialMarketPlayers(
   }
 
   return { data: players, error: null }
+}
+
+export function parseFantasyUser(
+  value: unknown
+): ContractResult<FantasyUserProfile> {
+  if (!isRecord(value)) return { data: null, error: 'Invalid user response' }
+  const root = isRecord(value.user) ? value.user : value
+  const id = asString(root.id ?? root.userId)
+  const managerName =
+    asString(root.managerName) ?? asString(root.name) ?? asString(root.nickname)
+
+  if (!id || !managerName) {
+    return { data: null, error: 'Invalid user response' }
+  }
+
+  return {
+    data: { id, managerName, banned: root.banned === true },
+    error: null,
+  }
+}
+
+const LINEUP_POSITIONS = {
+  goalkeeper: { positionId: 1, lineupPosition: 'goalkeeper' },
+  defender: { positionId: 2, lineupPosition: 'defender' },
+  midfield: { positionId: 3, lineupPosition: 'midfielder' },
+  midfielder: { positionId: 3, lineupPosition: 'midfielder' },
+  striker: { positionId: 4, lineupPosition: 'forward' },
+  forward: { positionId: 4, lineupPosition: 'forward' },
+  coach: { positionId: 5, lineupPosition: 'coach' },
+} as const
+
+function getWeekPoints(
+  playerMaster: JsonRecord,
+  weekNumber: number
+): number | null {
+  const stats = unwrapArray(playerMaster.lastStats ?? playerMaster.playerStats)
+  if (!stats) return null
+
+  const week = stats.find(
+    (entry) => isRecord(entry) && asNumber(entry.weekNumber) === weekNumber
+  )
+  return isRecord(week)
+    ? asNumber(week.totalPoints ?? week.points ?? week.weekPoints)
+    : null
+}
+
+export function parseLineup(
+  value: unknown,
+  weekNumber: number,
+  teams?: TeamMasterLookup
+): ContractResult<LineupSnapshot> {
+  if (!isRecord(value)) return { data: null, error: 'Invalid lineup response' }
+
+  const formation = isRecord(value.formation) ? value.formation : value
+  const players: LineupPlayer[] = []
+
+  for (const [key, metadata] of Object.entries(LINEUP_POSITIONS)) {
+    const entries = formation[key]
+    if (!Array.isArray(entries)) continue
+
+    for (const entry of entries) {
+      if (!isRecord(entry)) {
+        return { data: null, error: 'Invalid lineup player' }
+      }
+      const master = isRecord(entry.playerMaster) ? entry.playerMaster : entry
+      const normalizedMaster = {
+        ...master,
+        positionId: asNumber(master.positionId) ?? metadata.positionId,
+        marketValue: asNumber(master.marketValue) ?? 0,
+        points: asNumber(master.points) ?? 0,
+        averagePoints: asNumber(master.averagePoints) ?? 0,
+      }
+      const weekPoints = getWeekPoints(master, weekNumber)
+      const player = parsePlayerMaster(
+        normalizedMaster,
+        {
+          ...(asString(entry.playerTeamId)
+            ? { playerTeamId: asString(entry.playerTeamId) }
+            : {}),
+          lineupPosition: metadata.lineupPosition,
+          ...(weekPoints !== null ? { weekPoints } : {}),
+        },
+        teams
+      )
+
+      if (!player) return { data: null, error: 'Invalid lineup player' }
+      players.push(player as LineupPlayer)
+    }
+  }
+
+  const formationName =
+    asString(formation.tacticalFormation) ??
+    asString(value.tacticalFormation) ??
+    asString(value.formationName)
+
+  return {
+    data: {
+      formationName,
+      players,
+      updatedAt: asString(value.updatedAt),
+    },
+    error: null,
+  }
+}
+
+export function parseCalendar(
+  value: unknown,
+  teams: TeamMasterLookup
+): ContractResult<CalendarMatch[]> {
+  const entries = unwrapArray(value, ['elements', 'matches'])
+  if (!entries) return { data: null, error: 'Invalid calendar response' }
+
+  const matches: CalendarMatch[] = []
+  for (const entry of entries) {
+    if (!isRecord(entry)) return { data: null, error: 'Invalid match entry' }
+
+    const id = asString(entry.id)
+    const date = asString(entry.matchDate ?? entry.date)
+    const embeddedLocal = isRecord(entry.local) ? entry.local : null
+    const embeddedVisitor = isRecord(entry.visitor) ? entry.visitor : null
+    const localId = asString(entry.localId ?? embeddedLocal?.id)
+    const visitorId = asString(entry.visitorId ?? embeddedVisitor?.id)
+    const localTeam = localId ? teams.get(localId) : null
+    const visitorTeam = visitorId ? teams.get(visitorId) : null
+    const matchState = asNumber(entry.matchState)
+
+    if (!id || !date || !localId || !visitorId || matchState === null) {
+      return { data: null, error: 'Invalid match entry' }
+    }
+
+    matches.push({
+      id,
+      date,
+      local: {
+        id: localId,
+        name:
+          asString(embeddedLocal?.name) ?? localTeam?.name ?? `Team ${localId}`,
+        ...(localTeam?.shortName ? { shortName: localTeam.shortName } : {}),
+      },
+      visitor: {
+        id: visitorId,
+        name:
+          asString(embeddedVisitor?.name) ??
+          visitorTeam?.name ??
+          `Team ${visitorId}`,
+        ...(visitorTeam?.shortName ? { shortName: visitorTeam.shortName } : {}),
+      },
+      matchState,
+      localScore: asNumber(entry.localScore),
+      visitorScore: asNumber(entry.visitorScore),
+    })
+  }
+
+  return { data: matches, error: null }
+}
+
+function parseStatPlayers(team: unknown): MatchStats['players'] {
+  if (!isRecord(team) || !Array.isArray(team.players)) return []
+
+  return team.players.flatMap((entry) => {
+    if (!isRecord(entry)) return []
+    const id = asString(entry.id)
+    const name = asString(entry.nickname) ?? asString(entry.name)
+    const weekPoints = asNumber(entry.weekPoints ?? entry.points)
+    return id && name && weekPoints !== null ? [{ id, name, weekPoints }] : []
+  })
+}
+
+export function parseMatchStats(value: unknown): ContractResult<MatchStats[]> {
+  const entries = unwrapArray(value, ['elements', 'matches'])
+  if (!entries) return { data: null, error: 'Invalid match stats response' }
+
+  const matches: MatchStats[] = []
+  for (const entry of entries) {
+    if (!isRecord(entry)) {
+      return { data: null, error: 'Invalid match stats entry' }
+    }
+    const matchId = asString(entry.id ?? entry.matchId)
+    if (!matchId) return { data: null, error: 'Invalid match stats entry' }
+
+    matches.push({
+      matchId,
+      players: [
+        ...parseStatPlayers(entry.local ?? entry.home),
+        ...parseStatPlayers(entry.visitor ?? entry.away),
+      ].sort((a, b) => b.weekPoints - a.weekPoints),
+    })
+  }
+
+  return { data: matches, error: null }
+}
+
+export function buildRankingEvolution(
+  weeklyRankings: Array<{ week: number; ranking: LeagueRanking[] }>
+): RankingEvolution {
+  const ordered = [...weeklyRankings].sort((a, b) => a.week - b.week)
+  const teams = new Map<
+    string,
+    {
+      id: string
+      name: string
+      weeklyPoints: Map<number, number>
+      positions: number[]
+      cumulativePoints: number[]
+    }
+  >()
+
+  for (const { week, ranking } of ordered) {
+    for (const entry of ranking) {
+      const id = entry.team.id
+      const existing = teams.get(id) ?? {
+        id,
+        name: entry.team.manager.managerName,
+        weeklyPoints: new Map<number, number>(),
+        positions: [],
+        cumulativePoints: [],
+      }
+      existing.weeklyPoints.set(week, entry.points)
+      teams.set(id, existing)
+    }
+  }
+
+  const teamList = [...teams.values()]
+  const running = new Map(teamList.map((team) => [team.id, 0]))
+  for (const { week } of ordered) {
+    for (const team of teamList) {
+      const total =
+        (running.get(team.id) ?? 0) + (team.weeklyPoints.get(week) ?? 0)
+      running.set(team.id, total)
+      team.cumulativePoints.push(total)
+    }
+
+    const ranked = [...teamList].sort(
+      (a, b) =>
+        (running.get(b.id) ?? 0) - (running.get(a.id) ?? 0) ||
+        a.name.localeCompare(b.name)
+    )
+    ranked.forEach((team, index) => {
+      team.positions.push(index + 1)
+    })
+  }
+
+  return {
+    weeks: ordered.map(({ week }) => week),
+    teams: teamList
+      .map(({ weeklyPoints: _weeklyPoints, ...team }) => team)
+      .sort(
+        (a, b) =>
+          (a.positions.at(-1) ?? Number.MAX_SAFE_INTEGER) -
+          (b.positions.at(-1) ?? Number.MAX_SAFE_INTEGER)
+      ),
+  }
+}
+
+export function parsePlayerDetail(
+  value: unknown,
+  teams?: TeamMasterLookup
+): ContractResult<PlayerDetail> {
+  if (!isRecord(value)) {
+    return { data: null, error: 'Invalid player detail response' }
+  }
+
+  const master = isRecord(value.playerMaster)
+    ? value.playerMaster
+    : isRecord(value.player)
+      ? value.player
+      : value
+  const market = isRecord(value.marketPlayer)
+    ? value.marketPlayer
+    : isRecord(value.playerMarket)
+      ? value.playerMarket
+      : null
+  const marketId = market ? asString(market.id) : null
+  const salePrice = market ? asNumber(market.salePrice) : null
+  const expirationDate = market ? asString(market.expirationDate) : null
+
+  const player = parsePlayerMaster(
+    {
+      ...master,
+      marketValue: asNumber(master.marketValue) ?? 0,
+      points: asNumber(master.points) ?? 0,
+      averagePoints: asNumber(master.averagePoints) ?? 0,
+    },
+    {
+      ...(asString(value.playerTeamId)
+        ? { playerTeamId: asString(value.playerTeamId) }
+        : {}),
+      ...(asNumber(value.buyoutClause) !== null
+        ? { buyoutClause: asNumber(value.buyoutClause) }
+        : {}),
+      ...(asString(value.buyoutClauseLockedEndTime)
+        ? {
+            buyoutClauseLockedEndTime: asString(
+              value.buyoutClauseLockedEndTime
+            ),
+          }
+        : {}),
+      ...(marketId && salePrice !== null && expirationDate
+        ? {
+            saleInfo: {
+              marketId,
+              salePrice,
+              expirationDate,
+              numberOfOffers: asNumber(market?.numberOfOffers) ?? 0,
+            },
+          }
+        : {}),
+    },
+    teams
+  )
+
+  if (!player) return { data: null, error: 'Invalid player detail response' }
+
+  const stats = unwrapArray(master.playerStats ?? master.lastStats) ?? []
+  const weeklyStats: PlayerWeeklyStat[] = stats.flatMap((entry) => {
+    if (!isRecord(entry)) return []
+    const weekNumber = asNumber(entry.weekNumber)
+    const totalPoints = asNumber(entry.totalPoints ?? entry.points)
+    return weekNumber !== null && totalPoints !== null
+      ? [{ weekNumber, totalPoints }]
+      : []
+  })
+
+  const seasonEntries = Array.isArray(value.seasons) ? value.seasons : []
+  const seasons: PlayerSeasonSummary[] = seasonEntries.flatMap((entry) => {
+    if (!isRecord(entry)) return []
+    const label =
+      asString(entry.name) ?? asString(entry.season) ?? asString(entry.year)
+    return label
+      ? [{ label, points: asNumber(entry.points ?? entry.totalPoints) }]
+      : []
+  })
+
+  return {
+    data: {
+      player,
+      weeklyStats: weeklyStats.sort((a, b) => a.weekNumber - b.weekNumber),
+      seasons,
+    },
+    error: null,
+  }
 }

@@ -10,12 +10,18 @@ import {
 import { buildActivityRadar } from '../src/services/activity-service.ts'
 import { ApiClient } from '../src/services/api-client.ts'
 import {
+  buildRankingEvolution,
   parseActivityPlayers,
+  parseCalendar,
   parseCurrentWeek,
+  parseFantasyUser,
   parseLeagueActivity,
   parseLeagueRanking,
   parseLeagues,
+  parseLineup,
+  parseMatchStats,
   parseOfficialMarketPlayers,
+  parsePlayerDetail,
   parseTeamMoney,
   parseTeamPlayers,
   parseTeamsMaster,
@@ -167,6 +173,179 @@ test('normalizes activity, budget and current week contracts', () => {
   assert.equal(week.data?.weekNumber, 1)
 })
 
+test('normalizes the current Fantasy user without retaining extra profile data', () => {
+  const result = parseFantasyUser({
+    user: {
+      id: 42,
+      managerName: 'Manager',
+      banned: false,
+      email: 'not-retained@example.test',
+    },
+  })
+
+  assert.deepEqual(result, {
+    data: { id: '42', managerName: 'Manager', banned: false },
+    error: null,
+  })
+})
+
+test('normalizes historical lineups and matchday points by position', () => {
+  const teams = parseTeamsMaster([{ id: 3, name: 'Example FC' }])
+  assert.ok(teams.data)
+
+  const result = parseLineup(
+    {
+      formation: {
+        tacticalFormation: '4-3-3',
+        goalkeeper: [
+          {
+            playerTeamId: 100,
+            playerMaster: {
+              ...playerMaster,
+              team: undefined,
+              teamId: 3,
+              lastStats: [
+                { weekNumber: 1, totalPoints: 4 },
+                { weekNumber: 2, totalPoints: 7 },
+              ],
+            },
+          },
+        ],
+      },
+      updatedAt: '2026-08-20T18:00:00Z',
+    },
+    2,
+    teams.data
+  )
+
+  assert.equal(result.error, null)
+  assert.equal(result.data?.formationName, '4-3-3')
+  assert.equal(result.data?.players[0].lineupPosition, 'goalkeeper')
+  assert.equal(result.data?.players[0].weekPoints, 7)
+  assert.equal(result.data?.players[0].team.name, 'Example FC')
+})
+
+test('enriches the competition calendar with master team names', () => {
+  const teams = parseTeamsMaster([
+    { id: 1, name: 'Home Club', shortName: 'HOME' },
+    { id: 2, name: 'Away Club', shortName: 'AWAY' },
+  ])
+  assert.ok(teams.data)
+
+  const result = parseCalendar(
+    [
+      {
+        id: 10,
+        matchDate: '2026-08-15T19:30:00+02:00',
+        localId: 1,
+        visitorId: 2,
+        matchState: 1,
+        localScore: null,
+        visitorScore: null,
+      },
+    ],
+    teams.data
+  )
+
+  assert.equal(result.error, null)
+  assert.equal(result.data?.[0].local.name, 'Home Club')
+  assert.equal(result.data?.[0].visitor.shortName, 'AWAY')
+  assert.equal(result.data?.[0].localScore, null)
+})
+
+test('normalizes match statistics and orders top scorers', () => {
+  const result = parseMatchStats([
+    {
+      matchId: 10,
+      local: {
+        players: [
+          { id: 1, nickname: 'One', weekPoints: 3 },
+          { id: 2, nickname: 'Two', weekPoints: 8 },
+        ],
+      },
+      visitor: { players: [{ id: 3, name: 'Three', points: 5 }] },
+    },
+  ])
+
+  assert.equal(result.error, null)
+  assert.deepEqual(
+    result.data?.[0].players.map((player) => player.name),
+    ['Two', 'Three', 'One']
+  )
+})
+
+test('builds cumulative league positions from weekly standings', () => {
+  const firstWeek = parseLeagueRanking([
+    {
+      position: 1,
+      points: 10,
+      team: { id: 1, manager: { id: 11, managerName: 'Alpha' } },
+    },
+    {
+      position: 2,
+      points: 8,
+      team: { id: 2, manager: { id: 22, managerName: 'Beta' } },
+    },
+  ])
+  const secondWeek = parseLeagueRanking([
+    {
+      position: 2,
+      points: 1,
+      team: { id: 1, manager: { id: 11, managerName: 'Alpha' } },
+    },
+    {
+      position: 1,
+      points: 9,
+      team: { id: 2, manager: { id: 22, managerName: 'Beta' } },
+    },
+  ])
+  assert.ok(firstWeek.data)
+  assert.ok(secondWeek.data)
+
+  const evolution = buildRankingEvolution([
+    { week: 1, ranking: firstWeek.data },
+    { week: 2, ranking: secondWeek.data },
+  ])
+
+  assert.deepEqual(evolution.weeks, [1, 2])
+  assert.deepEqual(evolution.teams[0], {
+    id: '2',
+    name: 'Beta',
+    positions: [2, 1],
+    cumulativePoints: [8, 17],
+  })
+  assert.deepEqual(evolution.teams[1].cumulativePoints, [10, 11])
+})
+
+test('normalizes player details and weekly history', () => {
+  const result = parsePlayerDetail({
+    playerTeamId: 100,
+    buyoutClause: '45000000',
+    playerMaster: {
+      ...playerMaster,
+      playerStats: [
+        { weekNumber: 2, totalPoints: 6 },
+        { weekNumber: 1, totalPoints: 4 },
+      ],
+    },
+    seasons: [
+      { season: '2025/26', points: 150 },
+      { season: '2024/25', points: null },
+    ],
+  })
+
+  assert.equal(result.error, null)
+  assert.equal(result.data?.player.buyoutClause, 45000000)
+  assert.deepEqual(result.data?.weeklyStats, [
+    { weekNumber: 1, totalPoints: 4 },
+    { weekNumber: 2, totalPoints: 6 },
+  ])
+  assert.deepEqual(result.data?.seasons, [
+    { label: '2025/26', points: 150 },
+    { label: '2024/25', points: null },
+  ])
+})
+
 test('builds an enriched read-only activity radar', () => {
   const ranking = parseLeagueRanking([
     {
@@ -244,6 +423,20 @@ test('proxy allowlist rejects external URLs and legacy endpoints', () => {
   assert.equal(
     getAllowedFantasyPath('/v3/teams-master?x-lang=es', 'GET'),
     '/v3/teams-master?x-lang=es'
+  )
+  assert.equal(
+    getAllowedFantasyPath(
+      '/v1/competition/1/calendar?weekNumber=4&x-lang=es',
+      'GET'
+    ),
+    '/v1/competition/1/calendar?weekNumber=4&x-lang=es'
+  )
+  assert.equal(
+    getAllowedFantasyPath(
+      '/v1/competition/1/player/player-1/league/league-1?x-lang=es',
+      'GET'
+    ),
+    '/v1/competition/1/player/player-1/league/league-1?x-lang=es'
   )
   assert.equal(getAllowedFantasyPath('//example.com/steal', 'GET'), null)
   assert.equal(
