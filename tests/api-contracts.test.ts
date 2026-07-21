@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { createContentSecurityPolicy } from '../src/lib/content-security-policy.ts'
 import {
   getAllowedFantasyPath,
   preserveUpstreamResponse,
@@ -237,6 +238,18 @@ test('proxy allowlist rejects external URLs and legacy endpoints', () => {
   )
   assert.equal(getAllowedFantasyPath('/v4/leagues', 'GET'), null)
   assert.equal(getAllowedFantasyPath('/v1/competition/1/leagues', 'POST'), null)
+})
+
+test('CSP permits Next tooling only in development', () => {
+  const development = createContentSecurityPolicy('test-nonce', true)
+  const production = createContentSecurityPolicy('test-nonce', false)
+
+  assert.match(development, /style-src 'self' 'unsafe-inline'/)
+  assert.match(development, /script-src[^;]+'unsafe-eval'/)
+  assert.doesNotMatch(development, /style-src[^;]+'nonce-/)
+
+  assert.match(production, /style-src 'self' 'nonce-test-nonce'/)
+  assert.doesNotMatch(production, /'unsafe-inline'|'unsafe-eval'/)
 })
 
 test('proxy response preserves upstream error statuses and bodies', async () => {

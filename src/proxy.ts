@@ -1,23 +1,13 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { createContentSecurityPolicy } from '@/lib/content-security-policy'
 
 export function proxy(request: NextRequest): NextResponse {
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64')
   const isDevelopment = process.env.NODE_ENV === 'development'
-  const contentSecurityPolicy = `
-    default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDevelopment ? " 'unsafe-eval'" : ''};
-    style-src 'self' 'nonce-${nonce}';
-    img-src 'self' blob: data:;
-    font-src 'self' data:;
-    connect-src 'self';
-    object-src 'none';
-    base-uri 'self';
-    form-action 'self';
-    frame-ancestors 'none';
-    upgrade-insecure-requests;
-  `
-    .replace(/\s{2,}/g, ' ')
-    .trim()
+  const contentSecurityPolicy = createContentSecurityPolicy(
+    nonce,
+    isDevelopment
+  )
 
   const requestHeaders = new Headers(request.headers)
   requestHeaders.set('x-nonce', nonce)
