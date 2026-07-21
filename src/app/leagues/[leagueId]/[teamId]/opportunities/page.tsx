@@ -51,9 +51,9 @@ export default function PlayerOpportunitiesPage() {
             )
 
             const allOpponentPlayersWithOwner = opponentPlayersResults
-              .filter((result) => result.data)
-              .flatMap((result, index) => {
-                const owner = opponentUsers[index]
+              .map((result, index) => ({ result, owner: opponentUsers[index] }))
+              .filter(({ result }) => result.data)
+              .flatMap(({ result, owner }) => {
                 return (result.data || []).map((player) => ({
                   ...player,
                   owner: {

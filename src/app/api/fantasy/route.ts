@@ -1,114 +1,71 @@
-import { NextRequest, NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import {
+  getAllowedFantasyPath,
+  preserveUpstreamResponse,
+} from '@/lib/fantasy-proxy'
 
-const API_BASE_URL = 'https://api-fantasy.llt-services.com/api'
+const API_BASE_URL = 'https://fantasy-api.llt-services.com/api'
+const MAX_REQUEST_BODY_BYTES = 64 * 1024
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const path = searchParams.get('path') || ''
+async function proxyRequest(request: NextRequest): Promise<Response> {
+  const method = request.method.toUpperCase()
+  const rawPath = request.nextUrl.searchParams.get('path')
+  const path = getAllowedFantasyPath(rawPath, method)
 
-  const authHeader = request.headers.get('authorization')
-
-  // Remove the duplicate /api part since it's already in API_BASE_URL
-  const cleanPath = path.startsWith('/api') ? path.substring(4) : path
-
-  try {
-    const response = await fetch(`${API_BASE_URL}${cleanPath}`, {
-      headers: {
-        Accept: 'application/json',
-        'x-lang': 'es',
-        ...(authHeader && { Authorization: authHeader }),
-      },
-    })
-
-    if (!response.ok) {
-      console.error(`API request failed: ${response.status}`)
-    }
-
-    const data = await response.json()
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('API proxy error:', error)
-    return Response.json({ error: 'Failed to fetch data' }, { status: 500 })
+  if (!path) {
+    return Response.json(
+      { error: 'Fantasy API path or method is not allowed' },
+      { status: 403 }
+    )
   }
-}
 
-export async function POST(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const path = searchParams.get('path') || ''
-
-  const authHeader = request.headers.get('authorization')
-  const body = await request.json()
-
-  // Remove the duplicate /api part since it's already in API_BASE_URL
-  const cleanPath = path.startsWith('/api') ? path.substring(4) : path
+  const contentLength = Number(request.headers.get('content-length') || '0')
+  if (contentLength > MAX_REQUEST_BODY_BYTES) {
+    return Response.json(
+      { error: 'Request body is too large' },
+      { status: 413 }
+    )
+  }
 
   try {
-    const response = await fetch(`${API_BASE_URL}${cleanPath}`, {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        'x-lang': 'es',
-        ...(authHeader && { Authorization: authHeader }),
-      },
-      body: JSON.stringify(body),
-    })
+    const authHeader = request.headers.get('authorization')
+    const body = method === 'GET' ? undefined : await request.text()
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error(
-        `API POST request failed: ${response.status} - ${errorText}`
-      )
+    if (
+      body &&
+      new TextEncoder().encode(body).byteLength > MAX_REQUEST_BODY_BYTES
+    ) {
       return Response.json(
-        { error: `API request failed: ${response.status}` },
-        { status: response.status }
+        { error: 'Request body is too large' },
+        { status: 413 }
       )
     }
 
-    const data = await response.json()
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('API POST proxy error:', error)
-    return Response.json({ error: 'Failed to post data' }, { status: 500 })
-  }
-}
+    const headers = new Headers({ Accept: 'application/json', 'x-lang': 'es' })
+    if (authHeader) headers.set('Authorization', authHeader)
+    if (body) headers.set('Content-Type', 'application/json')
 
-export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const path = searchParams.get('path') || ''
-
-  const authHeader = request.headers.get('authorization')
-
-  // Remove the duplicate /api part since it's already in API_BASE_URL
-  const cleanPath = path.startsWith('/api') ? path.substring(4) : path
-
-  try {
-    const response = await fetch(`${API_BASE_URL}${cleanPath}`, {
-      method: 'DELETE',
-      headers: {
-        Accept: 'application/json',
-        'x-lang': 'es',
-        ...(authHeader && { Authorization: authHeader }),
-      },
+    const upstream = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers,
+      body: body || undefined,
+      cache: 'no-store',
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error(
-        `API DELETE request failed: ${response.status} - ${errorText}`
-      )
-      return Response.json(
-        { error: `API request failed: ${response.status}` },
-        { status: response.status }
-      )
-    }
-
-    // Check if response has content before parsing JSON
-    const text = await response.text()
-    const data = text ? JSON.parse(text) : { success: true }
-    return NextResponse.json(data)
+    return preserveUpstreamResponse(upstream)
   } catch (error) {
-    console.error('API DELETE proxy error:', error)
-    return Response.json({ error: 'Failed to delete data' }, { status: 500 })
+    console.error(
+      'Fantasy API proxy request failed',
+      error instanceof Error ? error.message : 'Unknown upstream error'
+    )
+    return Response.json(
+      { error: 'Fantasy API is unavailable' },
+      { status: 502 }
+    )
   }
 }
+
+export const GET = proxyRequest
+export const POST = proxyRequest
+export const PUT = proxyRequest
+export const DELETE = proxyRequest

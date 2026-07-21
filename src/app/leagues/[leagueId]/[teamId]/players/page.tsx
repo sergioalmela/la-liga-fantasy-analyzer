@@ -21,6 +21,7 @@ import { formatCurrency } from '@/utils/format-utils'
 import { sortPlayers } from '@/utils/player-sorting-utils'
 
 export default function TeamPlayersPage() {
+  const marketWritesEnabled = false
   const params = useParams()
   const leagueId = params.leagueId as string
   const teamId = params.teamId as string
@@ -220,13 +221,19 @@ export default function TeamPlayersPage() {
                 </div>
                 <Button
                   onClick={handleRemarketAll}
-                  disabled={remarketingAll || loading || players.length === 0}
+                  disabled={
+                    !marketWritesEnabled ||
+                    remarketingAll ||
+                    loading ||
+                    players.length === 0
+                  }
+                  title="Market writes are disabled until the 2026/27 API contract is verified"
                   className="flex items-center gap-2"
                 >
                   <RefreshCw
                     className={`w-4 h-4 ${remarketingAll ? 'animate-spin' : ''}`}
                   />
-                  Re-market All Players
+                  Re-market All Players (disabled)
                 </Button>
               </div>
 

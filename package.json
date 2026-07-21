@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "biome check --write"
+    "lint": "biome check --write",
+    "test": "node --test --experimental-strip-types tests/api-contracts.test.ts"
   },
   "dependencies": {
     "date-fns": "^4.1.0",

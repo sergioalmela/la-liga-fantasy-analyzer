@@ -1,6 +1,7 @@
 export interface ApiResponse<T> {
   data: T | null
   error: string | null
+  status?: number
 }
 
 export interface League {
@@ -54,7 +55,7 @@ export interface League {
   description: string
   premium: boolean
   team: {
-    id: number
+    id: string
     money: number
     teamPoints: number
     playersNumber: number
@@ -394,7 +395,7 @@ export interface MarketEvolution {
 
 export interface UserLeague extends Omit<League, 'team'> {
   team: {
-    id: number
+    id: string
     money: number
     teamPoints: number
     playersNumber: number

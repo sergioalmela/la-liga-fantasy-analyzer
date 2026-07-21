@@ -1,16 +1,15 @@
 import { Player } from '@/entities/player'
-import { apiClient, endpoints } from '@/services/api-client'
 import { ApiResponse, MarketValuePoint } from '@/types/api'
 
 export class PlayerAnalyticsService {
   async getPlayerMarketTrend(
-    cookie: string,
-    playerId: string
+    _cookie: string,
+    _playerId: string
   ): Promise<ApiResponse<MarketValuePoint[]>> {
-    return apiClient.get<MarketValuePoint[]>(
-      endpoints.player.marketValue(playerId),
-      cookie
-    )
+    return {
+      data: null,
+      error: 'Market-value history is not available for the 2026/27 season',
+    }
   }
 
   private calculateTrendPercentage(

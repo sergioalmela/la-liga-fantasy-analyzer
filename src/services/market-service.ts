@@ -1,33 +1,30 @@
-import { apiClient, endpoints } from '@/services/api-client'
 import { ApiResponse } from '@/types/api'
+
+const MARKET_WRITES_DISABLED =
+  'Market writes are disabled until the 2026/27 API contract and confirmation flow are verified'
 
 export class MarketService {
   /**
    * Withdraws a player from the market
    */
   async withdrawPlayer(
-    cookie: string,
-    leagueId: string,
-    marketId: string
+    _cookie: string,
+    _leagueId: string,
+    _marketId: string
   ): Promise<ApiResponse<unknown>> {
-    const url = endpoints.market.withdrawPlayer(leagueId, marketId)
-    return apiClient.delete(url, cookie)
+    return { data: null, error: MARKET_WRITES_DISABLED }
   }
 
   /**
    * Sells a player to the market
    */
   async sellPlayer(
-    cookie: string,
-    leagueId: string,
-    playerId: string,
-    salePrice: number
+    _cookie: string,
+    _leagueId: string,
+    _playerId: string,
+    _salePrice: number
   ): Promise<ApiResponse<unknown>> {
-    const url = endpoints.market.sellPlayer(leagueId)
-    return apiClient.post(url, cookie, {
-      playerId,
-      salePrice,
-    })
+    return { data: null, error: MARKET_WRITES_DISABLED }
   }
 
   /**
