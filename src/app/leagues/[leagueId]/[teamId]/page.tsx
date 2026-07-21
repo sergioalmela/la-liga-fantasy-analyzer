@@ -18,6 +18,8 @@ import { Navbar } from '@/components/layout/navbar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
+import { useLanguage } from '@/i18n/language-provider'
+import type { TranslationKey } from '@/i18n/messages'
 import { seasonService } from '@/services/season-service'
 import type { CurrentWeek, LeagueRanking } from '@/types/api'
 import type {
@@ -28,18 +30,22 @@ import type {
 } from '@/types/dashboard'
 
 const POSITION_LABELS = {
-  goalkeeper: 'Goalkeepers',
-  defender: 'Defenders',
-  midfielder: 'Midfielders',
-  forward: 'Forwards',
-  coach: 'Coaches',
+  goalkeeper: 'dashboard.goalkeepers',
+  defender: 'dashboard.defenders',
+  midfielder: 'dashboard.midfielders',
+  forward: 'dashboard.forwards',
+  coach: 'dashboard.coaches',
 } as const
 
-function formatMatchDate(value: string): string {
+function formatMatchDate(
+  value: string,
+  locale: 'es' | 'en',
+  unavailable: string
+): string {
   const date = new Date(value)
   return Number.isNaN(date.getTime())
-    ? 'Date unavailable'
-    : new Intl.DateTimeFormat('en-GB', {
+    ? unavailable
+    : new Intl.DateTimeFormat(locale === 'es' ? 'es-ES' : 'en-GB', {
         weekday: 'short',
         day: 'numeric',
         month: 'short',
@@ -48,13 +54,8 @@ function formatMatchDate(value: string): string {
       }).format(date)
 }
 
-function getMatchStatus(match: CalendarMatch): string {
-  if (match.matchState >= 7) return 'Finished'
-  if (match.matchState === 2 || match.matchState === 4) return 'Live'
-  return 'Scheduled'
-}
-
 export default function MatchdayDashboardPage() {
+  const { locale, t } = useLanguage()
   const params = useParams()
   const leagueId = params.leagueId as string
   const teamId = params.teamId as string
@@ -81,13 +82,13 @@ export default function MatchdayDashboardPage() {
         )
         if (evolutionResult.data) setEvolution(evolutionResult.data)
       } else {
-        setErrors([result.error || 'Failed to load the current matchday'])
+        setErrors([t('dashboard.loadError')])
         setLoading(false)
       }
     }
 
     void loadCurrentWeek()
-  }, [leagueId])
+  }, [leagueId, t])
 
   const loadWeek = useCallback(async () => {
     if (selectedWeek === null) return
@@ -128,13 +129,13 @@ export default function MatchdayDashboardPage() {
   const lineupGroups = useMemo(() => {
     return Object.entries(POSITION_LABELS).map(([position, label]) => ({
       position,
-      label,
+      label: t(label as TranslationKey),
       players:
         lineup?.players.filter(
           (player) => player.lineupPosition === position
         ) || [],
     }))
-  }, [lineup])
+  }, [lineup, t])
   const starterCount =
     lineup?.players.filter((player) => player.lineupPosition !== 'coach')
       .length || 0
@@ -147,11 +148,9 @@ export default function MatchdayDashboardPage() {
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                Matchday dashboard
+                {t('dashboard.title')}
               </h1>
-              <p className="mt-2 text-gray-600">
-                Lineup, fixtures, standings and weekly progress in one place.
-              </p>
+              <p className="mt-2 text-gray-600">{t('dashboard.subtitle')}</p>
             </div>
             <Button
               variant="outline"
@@ -162,7 +161,7 @@ export default function MatchdayDashboardPage() {
               <RefreshCw
                 className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`}
               />
-              Refresh
+              {t('common.refresh')}
             </Button>
           </div>
 
@@ -170,21 +169,29 @@ export default function MatchdayDashboardPage() {
             <Card className="mb-6">
               <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm text-gray-500">Current matchday</p>
+                  <p className="text-sm text-gray-500">
+                    {t('dashboard.current')}
+                  </p>
                   <p className="text-xl font-bold text-gray-900">
-                    Week {currentWeek.weekNumber}
-                    {currentWeek.isLive ? ' · Live' : ''}
+                    {t('dashboard.week')} {currentWeek.weekNumber}
+                    {currentWeek.isLive ? ` · ${t('dashboard.live')}` : ''}
                   </p>
                   <p className="mt-1 flex items-center gap-1 text-sm text-gray-600">
-                    <Clock className="h-4 w-4" /> Closes{' '}
-                    {formatMatchDate(currentWeek.closingWeekDate)}
+                    <Clock className="h-4 w-4" />{' '}
+                    {t('dashboard.closes', {
+                      date: formatMatchDate(
+                        currentWeek.closingWeekDate,
+                        locale,
+                        t('common.unknownDate')
+                      ),
+                    })}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
                     size="sm"
                     variant="outline"
-                    aria-label="Previous week"
+                    aria-label={t('dashboard.previousWeek')}
                     disabled={selectedWeek <= 1}
                     onClick={() =>
                       setSelectedWeek((week) => Math.max(1, (week || 1) - 1))
@@ -193,7 +200,7 @@ export default function MatchdayDashboardPage() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <label className="text-sm font-medium text-gray-700">
-                    Week
+                    {t('dashboard.week')}
                     <select
                       className="ml-2 rounded border border-gray-300 bg-white px-3 py-2"
                       value={selectedWeek}
@@ -213,7 +220,7 @@ export default function MatchdayDashboardPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    aria-label="Next week"
+                    aria-label={t('dashboard.nextWeek')}
                     disabled={selectedWeek >= 38}
                     onClick={() =>
                       setSelectedWeek((week) => Math.min(38, (week || 1) + 1))
@@ -226,11 +233,11 @@ export default function MatchdayDashboardPage() {
             </Card>
           )}
 
-          {loading && <BouncingBallLoader message="Loading matchday..." />}
+          {loading && <BouncingBallLoader message={t('dashboard.loading')} />}
 
           {!loading && errors.length > 0 && (
             <div className="mb-6 rounded border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800">
-              Some sections are not available yet: {errors.join(' · ')}
+              {t('dashboard.partialError', { count: errors.length })}
             </div>
           )}
 
@@ -241,18 +248,22 @@ export default function MatchdayDashboardPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <ListChecks className="h-5 w-5 text-blue-600" />
-                      Your lineup · {starterCount}/11 starters
+                      {t('dashboard.lineup', { count: starterCount })}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     {lineup ? (
                       <div className="space-y-4">
                         <p className="text-sm text-gray-600">
-                          Formation: {lineup.formationName || 'Not specified'}
+                          {t('dashboard.formation', {
+                            formation:
+                              lineup.formationName ||
+                              t('dashboard.notSpecified'),
+                          })}
                         </p>
                         {starterCount < 11 && (
                           <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">
-                            Your lineup appears incomplete for this week.
+                            {t('dashboard.incomplete')}
                           </p>
                         )}
                         {lineupGroups
@@ -281,7 +292,7 @@ export default function MatchdayDashboardPage() {
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">
-                        No lineup is available for this week.
+                        {t('dashboard.noLineup')}
                       </p>
                     )}
                   </CardContent>
@@ -291,7 +302,7 @@ export default function MatchdayDashboardPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <CalendarDays className="h-5 w-5 text-green-600" />
-                      Fixtures
+                      {t('dashboard.fixtures')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -321,12 +332,25 @@ export default function MatchdayDashboardPage() {
                                 </span>
                               </div>
                               <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
-                                <span>{formatMatchDate(match.date)}</span>
-                                <span>{getMatchStatus(match)}</span>
+                                <span>
+                                  {formatMatchDate(
+                                    match.date,
+                                    locale,
+                                    t('common.unknownDate')
+                                  )}
+                                </span>
+                                <span>
+                                  {match.matchState >= 7
+                                    ? t('dashboard.finished')
+                                    : match.matchState === 2 ||
+                                        match.matchState === 4
+                                      ? t('dashboard.live')
+                                      : t('dashboard.scheduled')}
+                                </span>
                               </div>
                               {topPlayers.length > 0 && (
                                 <p className="mt-2 text-xs text-purple-700">
-                                  Top points:{' '}
+                                  {t('dashboard.topPoints')}{' '}
                                   {topPlayers
                                     .map(
                                       (player) =>
@@ -341,7 +365,7 @@ export default function MatchdayDashboardPage() {
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">
-                        No fixtures are available for this week.
+                        {t('dashboard.noFixtures')}
                       </p>
                     )}
                   </CardContent>
@@ -353,7 +377,7 @@ export default function MatchdayDashboardPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Trophy className="h-5 w-5 text-yellow-500" />
-                      Week standings
+                      {t('dashboard.weekStandings')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -362,9 +386,13 @@ export default function MatchdayDashboardPage() {
                         <table className="w-full text-sm">
                           <thead className="text-left text-gray-500">
                             <tr>
-                              <th className="pb-2">Pos.</th>
-                              <th className="pb-2">Manager</th>
-                              <th className="pb-2 text-right">Points</th>
+                              <th className="pb-2">
+                                {t('dashboard.position')}
+                              </th>
+                              <th className="pb-2">{t('common.manager')}</th>
+                              <th className="pb-2 text-right">
+                                {t('common.points')}
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
@@ -393,7 +421,7 @@ export default function MatchdayDashboardPage() {
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">
-                        Standings are not available for this week yet.
+                        {t('dashboard.noStandings')}
                       </p>
                     )}
                   </CardContent>
@@ -403,7 +431,7 @@ export default function MatchdayDashboardPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Users className="h-5 w-5 text-purple-600" />
-                      League evolution
+                      {t('dashboard.evolution')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -412,7 +440,7 @@ export default function MatchdayDashboardPage() {
                         <table className="w-full text-sm">
                           <thead className="text-left text-gray-500">
                             <tr>
-                              <th className="pb-2">Manager</th>
+                              <th className="pb-2">{t('common.manager')}</th>
                               {evolution.weeks.map((week) => (
                                 <th
                                   key={week}
@@ -440,7 +468,9 @@ export default function MatchdayDashboardPage() {
                                   <td
                                     key={`${team.id}-${evolution.weeks[index]}`}
                                     className="px-2 py-2 text-center"
-                                    title={`${team.cumulativePoints[index]} cumulative points`}
+                                    title={t('dashboard.cumulativePoints', {
+                                      points: team.cumulativePoints[index],
+                                    })}
                                   >
                                     {position}
                                   </td>
@@ -452,7 +482,7 @@ export default function MatchdayDashboardPage() {
                       </div>
                     ) : (
                       <p className="text-sm text-gray-500">
-                        Evolution will appear after the first scored matchday.
+                        {t('dashboard.noEvolution')}
                       </p>
                     )}
                   </CardContent>

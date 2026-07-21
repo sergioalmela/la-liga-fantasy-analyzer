@@ -12,6 +12,10 @@ cláusulas y el mercado de LALIGA Fantasy durante la temporada 2026/27.
   calendario, resultados, clasificación semanal y evolución acumulada.
 - Fichas individuales con estado, valor, puntuación y desglose por jornada
   cuando la API lo proporciona.
+- Interfaz completa en castellano e inglés, con castellano por defecto y
+  preferencia persistente en el navegador.
+- Tendencia reciente de valor en Mercado y Oportunidades mediante instantáneas
+  diarias locales de los valores actuales de la API.
 - Radar read-only de actividad, presupuesto, inversión y balance reciente por
   mánager.
 - Validación runtime de las respuestas remotas antes de entregarlas a React.
@@ -21,8 +25,9 @@ cláusulas y el mercado de LALIGA Fantasy durante la temporada 2026/27.
 - Publicación masiva de la plantilla al valor de mercado, renovando anuncios
   existentes con confirmación previa y resultado por jugador.
 - Pujas, ofertas, cláusulas y otras mutaciones permanecen desactivadas.
-- Tendencias históricas desactivadas: el endpoint anterior devuelve datos
-  congelados de la temporada 2025/26.
+- El endpoint histórico anterior permanece desactivado porque devuelve datos
+  congelados de la temporada 2025/26; la tendencia local empieza a calcularse
+  después de disponer de instantáneas de al menos dos días distintos.
 
 La API utilizada es privada y no está documentada públicamente. Puede cambiar
 sin previo aviso al comenzar una temporada.
@@ -78,7 +83,9 @@ La contraseña se envía por HTTPS al backend Next de esta aplicación, se reenv
 una vez al proveedor de LALIGA y no se persiste. El access token resultante se
 guarda en una cookie `HttpOnly`, `SameSite=Strict` y `Secure` en producción.
 Los datos Fantasy atraviesan el proxy Next, pero no se almacenan en una base de
-datos del proyecto.
+datos del proyecto. El navegador conserva únicamente el idioma elegido y hasta
+14 días de valores de mercado públicos para calcular tendencias; nunca guarda
+credenciales ni tokens accesibles desde JavaScript.
 
 Consulta [docs/authentication.md](docs/authentication.md) antes de desplegar la
 aplicación públicamente.

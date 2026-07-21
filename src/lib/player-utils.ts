@@ -15,6 +15,7 @@ export interface BuyoutStatus {
   status: 'protected' | 'unprotected' | 'expired' | 'expiring'
   message: string
   color: string
+  remainingHours?: number
 }
 
 export interface SaleStatus {
@@ -54,6 +55,7 @@ export function getBuyoutClauseStatus(player: Player): BuyoutStatus | null {
       status: 'expiring',
       message: `${hoursLeft}h left`,
       color: 'text-orange-600',
+      remainingHours: hoursLeft,
     }
   }
 
@@ -62,6 +64,7 @@ export function getBuyoutClauseStatus(player: Player): BuyoutStatus | null {
     status: 'protected',
     message: `${daysLeft}d left`,
     color: 'text-green-600',
+    remainingHours: hoursLeft,
   }
 }
 

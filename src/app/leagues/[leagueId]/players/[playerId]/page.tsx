@@ -9,16 +9,12 @@ import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
+import { useLanguage } from '@/i18n/language-provider'
 import { playerDetailService } from '@/services/player-detail-service'
 import type { PlayerDetail } from '@/types/dashboard'
 
-function formatStatus(status: string): string {
-  return status
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
-
 export default function PlayerDetailPage() {
+  const { t } = useLanguage()
   const params = useParams()
   const leagueId = params.leagueId as string
   const playerId = params.playerId as string
@@ -37,7 +33,7 @@ export default function PlayerDetailPage() {
       if (!active) return
 
       if (result.data) setDetail(result.data)
-      else setError(result.error || 'Failed to load player details')
+      else setError(t('detail.loadError'))
       setLoading(false)
     }
 
@@ -45,7 +41,24 @@ export default function PlayerDetailPage() {
     return () => {
       active = false
     }
-  }, [leagueId, playerId])
+  }, [leagueId, playerId, t])
+
+  const formatStatus = (status: string): string => {
+    const normalized = status.toLowerCase()
+    if (normalized === 'ok' || normalized === 'available') {
+      return t('detail.status.ok')
+    }
+    if (normalized.includes('injur') || normalized.includes('lesion')) {
+      return t('detail.status.injured')
+    }
+    if (normalized.includes('suspend') || normalized.includes('sancion')) {
+      return t('detail.status.suspended')
+    }
+    if (normalized.includes('doubt') || normalized.includes('duda')) {
+      return t('detail.status.doubt')
+    }
+    return t('detail.status.unknown')
+  }
 
   return (
     <AuthGuard>
@@ -56,10 +69,10 @@ export default function PlayerDetailPage() {
             href="/leagues"
             className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to leagues
+            <ArrowLeft className="h-4 w-4" /> {t('detail.back')}
           </Link>
 
-          {loading && <BouncingBallLoader message="Loading player..." />}
+          {loading && <BouncingBallLoader message={t('detail.loading')} />}
 
           {!loading && error && (
             <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-700">
@@ -73,9 +86,7 @@ export default function PlayerDetailPage() {
                 <h1 className="text-3xl font-bold text-gray-900">
                   {detail.player.nickname || detail.player.name}
                 </h1>
-                <p className="mt-2 text-gray-600">
-                  Current league data and matchday scores.
-                </p>
+                <p className="mt-2 text-gray-600">{t('detail.subtitle')}</p>
               </div>
 
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
@@ -85,11 +96,13 @@ export default function PlayerDetailPage() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <ShieldCheck className="h-5 w-5 text-green-600" />
-                        Availability
+                        {t('detail.availability')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-gray-600">Current status</p>
+                      <p className="text-sm text-gray-600">
+                        {t('detail.currentStatus')}
+                      </p>
                       <p className="mt-1 font-semibold text-gray-900">
                         {formatStatus(detail.player.playerStatus)}
                       </p>
@@ -102,7 +115,7 @@ export default function PlayerDetailPage() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <LineChart className="h-5 w-5 text-blue-600" />
-                        Matchday points
+                        {t('detail.matchdayPoints')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -111,8 +124,10 @@ export default function PlayerDetailPage() {
                           <table className="w-full text-sm">
                             <thead className="text-left text-gray-500">
                               <tr>
-                                <th className="pb-2">Matchday</th>
-                                <th className="pb-2 text-right">Points</th>
+                                <th className="pb-2">{t('detail.matchday')}</th>
+                                <th className="pb-2 text-right">
+                                  {t('common.points')}
+                                </th>
                               </tr>
                             </thead>
                             <tbody>
@@ -132,7 +147,7 @@ export default function PlayerDetailPage() {
                         </div>
                       ) : (
                         <p className="text-sm text-gray-500">
-                          No matchday scores are available yet.
+                          {t('detail.noScores')}
                         </p>
                       )}
                     </CardContent>
@@ -142,7 +157,7 @@ export default function PlayerDetailPage() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <CalendarDays className="h-5 w-5 text-purple-600" />
-                        Previous seasons
+                        {t('detail.previousSeasons')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -156,7 +171,7 @@ export default function PlayerDetailPage() {
                               <span>{season.label}</span>
                               <span className="font-medium">
                                 {season.points === null
-                                  ? 'No points'
+                                  ? t('common.noPoints')
                                   : `${season.points} pts`}
                               </span>
                             </div>
@@ -164,8 +179,7 @@ export default function PlayerDetailPage() {
                         </div>
                       ) : (
                         <p className="text-sm text-gray-500">
-                          The API does not provide previous-season data for this
-                          player.
+                          {t('detail.noSeasons')}
                         </p>
                       )}
                     </CardContent>

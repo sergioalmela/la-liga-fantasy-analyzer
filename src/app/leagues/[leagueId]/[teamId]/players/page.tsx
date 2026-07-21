@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
+import { useLanguage } from '@/i18n/language-provider'
 import { refreshMarketListings } from '@/services/market-service'
 import {
   calculateSummaryStats,
@@ -21,6 +22,7 @@ import { formatCurrency } from '@/utils/format-utils'
 import { sortPlayers } from '@/utils/player-sorting-utils'
 
 export default function TeamPlayersPage() {
+  const { t } = useLanguage()
   const params = useParams()
   const leagueId = params.leagueId as string
   const teamId = params.teamId as string
@@ -40,19 +42,19 @@ export default function TeamPlayersPage() {
         const result = await teamService.getPlayers(leagueId, teamId)
 
         if (result.error) {
-          setError(result.error)
+          setError(t('players.loadError'))
         } else {
           setPlayers(result.data || [])
         }
       } catch {
-        setError('Failed to load players')
+        setError(t('players.loadError'))
       } finally {
         setLoading(false)
       }
     }
 
     loadPlayers()
-  }, [leagueId, teamId])
+  }, [leagueId, t, teamId])
 
   const handleRefreshMarket = async () => {
     if (players.length === 0 || refreshingMarket) return
@@ -60,14 +62,17 @@ export default function TeamPlayersPage() {
     const listedPlayers = players.filter((player) => player.saleInfo)
     const unlistedPlayers = players.length - listedPlayers.length
     const confirmed = window.confirm(
-      `This will renew ${listedPlayers.length} existing listings and add ${unlistedPlayers} players to the market at their current market value. Existing listings must be withdrawn before they can be renewed. Continue?`
+      t('market.confirm', {
+        listed: listedPlayers.length,
+        unlisted: unlistedPlayers,
+      })
     )
     if (!confirmed) return
 
     setRefreshingMarket(true)
     setMarketStatus({
       tone: 'progress',
-      message: `Processing 0 of ${players.length} players...`,
+      message: t('market.processingStart', { total: players.length }),
     })
 
     const { renewed, added, failures } = await refreshMarketListings(
@@ -76,7 +81,11 @@ export default function TeamPlayersPage() {
       (current, total, playerName) => {
         setMarketStatus({
           tone: 'progress',
-          message: `Processing ${current} of ${total}: ${playerName}`,
+          message: t('market.processing', {
+            current,
+            total,
+            player: playerName,
+          }),
         })
       }
     )
@@ -86,9 +95,14 @@ export default function TeamPlayersPage() {
 
     setMarketStatus({
       tone: failures.length > 0 ? 'warning' : 'success',
-      message: `${renewed} listings renewed and ${added} players added.${
-        failures.length > 0 ? ` ${failures.length} failed.` : ''
-      }`,
+      message: t('market.result', {
+        renewed,
+        added,
+        failed:
+          failures.length > 0
+            ? t('market.failedCount', { count: failures.length })
+            : '',
+      }),
       ...(failures.length > 0 ? { failures } : {}),
     })
     setRefreshingMarket(false)
@@ -110,11 +124,9 @@ export default function TeamPlayersPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h1 className="text-3xl font-bold text-gray-900">
-                    My Players
+                    {t('players.title')}
                   </h1>
-                  <p className="mt-2 text-gray-600">
-                    Review your current squad and monitor player values
-                  </p>
+                  <p className="mt-2 text-gray-600">{t('players.subtitle')}</p>
                 </div>
                 <Button
                   onClick={() => void handleRefreshMarket()}
@@ -124,7 +136,7 @@ export default function TeamPlayersPage() {
                   <RefreshCw
                     className={`h-4 w-4 ${refreshingMarket ? 'animate-spin' : ''}`}
                   />
-                  Add / renew all on market
+                  {t('market.renew')}
                 </Button>
               </div>
 
@@ -158,7 +170,9 @@ export default function TeamPlayersPage() {
                     <div className="text-2xl font-bold text-blue-600">
                       {players.length}
                     </div>
-                    <p className="text-sm text-gray-600">Total Players</p>
+                    <p className="text-sm text-gray-600">
+                      {t('players.total')}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -166,7 +180,9 @@ export default function TeamPlayersPage() {
                     <div className="text-2xl font-bold text-green-600">
                       {formatCurrency(summaryStats.totalValue)}
                     </div>
-                    <p className="text-sm text-gray-600">Squad Value</p>
+                    <p className="text-sm text-gray-600">
+                      {t('players.squadValue')}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -174,7 +190,9 @@ export default function TeamPlayersPage() {
                     <div className="text-2xl font-bold text-purple-600">
                       {summaryStats.totalPoints}
                     </div>
-                    <p className="text-sm text-gray-600">Total Points</p>
+                    <p className="text-sm text-gray-600">
+                      {t('players.totalPoints')}
+                    </p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -182,7 +200,9 @@ export default function TeamPlayersPage() {
                     <div className="text-2xl font-bold text-orange-600">
                       {summaryStats.averagePoints}
                     </div>
-                    <p className="text-sm text-gray-600">Avg Points</p>
+                    <p className="text-sm text-gray-600">
+                      {t('players.averagePoints')}
+                    </p>
                   </CardContent>
                 </Card>
               </div>
@@ -197,7 +217,9 @@ export default function TeamPlayersPage() {
                   {playersWithLowBuyout.length > 0 && (
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                       <h3 className="text-sm font-medium text-orange-900 mb-2">
-                        Low Buyout Clauses ({playersWithLowBuyout.length})
+                        {t('players.lowBuyouts', {
+                          count: playersWithLowBuyout.length,
+                        })}
                       </h3>
                       <div className="text-sm text-orange-700">
                         {playersWithLowBuyout
@@ -210,8 +232,9 @@ export default function TeamPlayersPage() {
                   {playersWithExpiringProtection.length > 0 && (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                       <h3 className="text-sm font-medium text-red-900 mb-2">
-                        Expiring Protection (
-                        {playersWithExpiringProtection.length})
+                        {t('players.expiringProtection', {
+                          count: playersWithExpiringProtection.length,
+                        })}
                       </h3>
                       <div className="text-sm text-red-700">
                         {playersWithExpiringProtection
@@ -223,7 +246,7 @@ export default function TeamPlayersPage() {
                 </div>
               )}
 
-            {loading && <BouncingBallLoader message="Loading players..." />}
+            {loading && <BouncingBallLoader message={t('players.loading')} />}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
@@ -235,9 +258,9 @@ export default function TeamPlayersPage() {
               <div className="text-center py-12">
                 <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No players found
+                  {t('players.emptyTitle')}
                 </h3>
-                <p className="text-gray-600">Your squad appears to be empty.</p>
+                <p className="text-gray-600">{t('players.emptyText')}</p>
               </div>
             )}
 

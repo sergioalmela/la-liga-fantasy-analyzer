@@ -8,15 +8,22 @@ import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
+import { useLanguage } from '@/i18n/language-provider'
+import {
+  type MarketTrend,
+  recordAndBuildMarketTrends,
+} from '@/services/market-trend-service'
 import { teamService } from '@/services/team-service'
 import { sortOpportunities } from '@/utils/player-sorting-utils'
 
 export default function MarketPlayersPage() {
+  const { t } = useLanguage()
   const params = useParams()
   const leagueId = params.leagueId as string
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [trends, setTrends] = useState<Map<string, MarketTrend>>(new Map())
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -24,19 +31,21 @@ export default function MarketPlayersPage() {
         const result = await teamService.getOfficialMarketPlayers(leagueId)
 
         if (result.error) {
-          setError(result.error)
+          setError(t('players.loadError'))
         } else {
-          setPlayers(result.data || [])
+          const loadedPlayers = result.data || []
+          setPlayers(loadedPlayers)
+          setTrends(recordAndBuildMarketTrends(loadedPlayers))
         }
       } catch {
-        setError('Failed to load players')
+        setError(t('players.loadError'))
       } finally {
         setLoading(false)
       }
     }
 
     loadPlayers()
-  }, [leagueId])
+  }, [leagueId, t])
 
   return (
     <AuthGuard>
@@ -47,14 +56,12 @@ export default function MarketPlayersPage() {
           <div className="px-4 py-6 sm:px-0">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-gray-900">
-                Official Market Players
+                {t('market.title')}
               </h1>
-              <p className="mt-2 text-gray-600">
-                Players sold directly by La Liga teams
-              </p>
+              <p className="mt-2 text-gray-600">{t('market.subtitle')}</p>
             </div>
 
-            {loading && <BouncingBallLoader message="Loading players..." />}
+            {loading && <BouncingBallLoader message={t('players.loading')} />}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
@@ -66,9 +73,9 @@ export default function MarketPlayersPage() {
               <div className="text-center py-12">
                 <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No players found
+                  {t('players.emptyTitle')}
                 </h3>
-                <p className="text-gray-600">Your squad appears to be empty.</p>
+                <p className="text-gray-600">{t('market.emptyText')}</p>
               </div>
             )}
 
@@ -79,6 +86,8 @@ export default function MarketPlayersPage() {
                     key={player.id}
                     player={player}
                     detailsHref={`/leagues/${leagueId}/players/${player.id}`}
+                    showMarketTrend
+                    marketTrend={trends.get(player.id)}
                   />
                 ))}
               </div>

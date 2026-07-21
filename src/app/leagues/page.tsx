@@ -15,10 +15,12 @@ import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useLanguage } from '@/i18n/language-provider'
 import { leagueService } from '@/services/league-service'
 import { type League } from '@/types/api'
 
 export default function LeaguesPage() {
+  const { t } = useLanguage()
   const [leagues, setLeagues] = useState<League[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -29,19 +31,19 @@ export default function LeaguesPage() {
         const result = await leagueService.getLeagues()
 
         if (result.error) {
-          setError(result.error)
+          setError(t('leagues.loadError'))
         } else {
           setLeagues(result.data || [])
         }
       } catch {
-        setError('Failed to load leagues')
+        setError(t('leagues.loadError'))
       } finally {
         setLoading(false)
       }
     }
 
     loadLeagues()
-  }, [])
+  }, [t])
 
   return (
     <AuthGuard>
@@ -51,16 +53,16 @@ export default function LeaguesPage() {
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">My Leagues</h1>
-              <p className="mt-2 text-gray-600">
-                Manage your fantasy football leagues and teams
-              </p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {t('leagues.title')}
+              </h1>
+              <p className="mt-2 text-gray-600">{t('leagues.subtitle')}</p>
             </div>
 
             {loading && (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
-                <p className="mt-4 text-gray-600">Loading leagues...</p>
+                <p className="mt-4 text-gray-600">{t('leagues.loading')}</p>
               </div>
             )}
 
@@ -87,13 +89,19 @@ export default function LeaguesPage() {
                       <div className="space-y-3">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Users className="w-4 h-4" />
-                          <span>Players: {league.managersNumber}</span>
+                          <span>
+                            {t('leagues.managers', {
+                              count: league.managersNumber,
+                            })}
+                          </span>
                         </div>
 
                         {league.premium && (
                           <div className="flex items-center gap-2 text-sm">
                             <Check className="w-4 h-4 text-green-600" />
-                            <span className="text-green-600">Premium</span>
+                            <span className="text-green-600">
+                              {t('leagues.premium')}
+                            </span>
                           </div>
                         )}
 
@@ -101,12 +109,16 @@ export default function LeaguesPage() {
                           {league.team.isAdmin ? (
                             <>
                               <Shield className="w-4 h-4 text-blue-600" />
-                              <span className="text-blue-600">Admin</span>
+                              <span className="text-blue-600">
+                                {t('leagues.admin')}
+                              </span>
                             </>
                           ) : (
                             <>
                               <Users className="w-4 h-4 text-gray-600" />
-                              <span className="text-gray-600">Member</span>
+                              <span className="text-gray-600">
+                                {t('leagues.member')}
+                              </span>
                             </>
                           )}
                         </div>
@@ -117,33 +129,35 @@ export default function LeaguesPage() {
                           >
                             <Button size="sm" variant="primary">
                               <LayoutDashboard className="w-4 h-4 mr-1" />
-                              Matchday
+                              {t('leagues.matchday')}
                             </Button>
                           </Link>
                           <Link
                             href={`/leagues/${league.id}/${league.team.id}/activity`}
                           >
                             <Button size="sm" variant="outline">
-                              <Activity className="w-4 h-4 mr-1" /> Radar
+                              <Activity className="w-4 h-4 mr-1" />{' '}
+                              {t('leagues.radar')}
                             </Button>
                           </Link>
                           <Link
                             href={`/leagues/${league.id}/${league.team.id}/opportunities`}
                           >
                             <Button size="sm" variant="outline">
-                              <Star className="w-5 h-5" /> Opportunities
+                              <Star className="w-5 h-5" />{' '}
+                              {t('leagues.opportunities')}
                             </Button>
                           </Link>
                           <Link
                             href={`/leagues/${league.id}/${league.team.id}/players`}
                           >
                             <Button size="sm" variant="outline">
-                              My Players
+                              {t('leagues.myPlayers')}
                             </Button>
                           </Link>
                           <Link href={`/leagues/${league.id}/market`}>
                             <Button size="sm" variant="outline">
-                              Market
+                              {t('leagues.market')}
                             </Button>
                           </Link>
                         </div>
@@ -158,11 +172,9 @@ export default function LeaguesPage() {
               <div className="text-center py-12">
                 <Trophy className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  No leagues found
+                  {t('leagues.emptyTitle')}
                 </h3>
-                <p className="text-gray-600">
-                  You don't seem to be participating in any leagues yet.
-                </p>
+                <p className="text-gray-600">{t('leagues.emptyText')}</p>
               </div>
             )}
           </div>

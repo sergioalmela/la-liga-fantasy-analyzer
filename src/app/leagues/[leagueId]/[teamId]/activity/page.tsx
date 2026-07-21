@@ -15,6 +15,8 @@ import { Navbar } from '@/components/layout/navbar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
+import { useLanguage } from '@/i18n/language-provider'
+import type { TranslationKey } from '@/i18n/messages'
 import {
   type ActivityRadar,
   activityService,
@@ -22,33 +24,57 @@ import {
 } from '@/services/activity-service'
 import { formatCurrency } from '@/utils/format-utils'
 
-function formatActivityDate(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Fecha desconocida'
+type Translate = ReturnType<typeof useLanguage>['t']
 
-  return new Intl.DateTimeFormat('es-ES', {
+const ACTIVITY_LABEL_KEYS: Partial<Record<number, TranslationKey>> = {
+  1: 'activity.type.1',
+  4: 'activity.type.4',
+  6: 'activity.type.6',
+  7: 'activity.type.7',
+  9: 'activity.type.9',
+  31: 'activity.type.31',
+  32: 'activity.type.32',
+  33: 'activity.type.33',
+}
+
+function formatActivityDate(
+  value: string,
+  locale: 'es' | 'en',
+  t: Translate
+): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return t('common.unknownDate')
+
+  return new Intl.DateTimeFormat(locale === 'es' ? 'es-ES' : 'en-GB', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date)
 }
 
-function getActivityDescription(activity: RadarActivity): string {
-  const actor = activity.actorName || 'Un mánager'
+function getActivityLabel(activity: RadarActivity, t: Translate): string {
+  const key = ACTIVITY_LABEL_KEYS[activity.activityTypeId]
+  return key
+    ? t(key)
+    : t('activity.type.other', { id: activity.activityTypeId })
+}
+
+function getActivityDescription(activity: RadarActivity, t: Translate): string {
+  const actor = activity.actorName || t('activity.unknownManager')
   const player = activity.playerName ? ` · ${activity.playerName}` : ''
   const counterparty = activity.counterpartyName
     ? ` · ${activity.counterpartyName}`
     : ''
 
-  if (activity.activityTypeId === 9) return `${actor} se unió a la liga`
-  if (activity.activityTypeId === 6)
-    return `${actor} recibió un premio de jornada`
+  if (activity.activityTypeId === 9) return t('activity.joined', { actor })
+  if (activity.activityTypeId === 6) return t('activity.reward', { actor })
   if (activity.activityTypeId === 7)
-    return `${actor} no puntuó por alineación incorrecta`
+    return t('activity.invalidLineup', { actor })
 
-  return `${actor} · ${activity.label}${player}${counterparty}`
+  return `${actor} · ${getActivityLabel(activity, t)}${player}${counterparty}`
 }
 
 export default function LeagueActivityPage() {
+  const { locale, t } = useLanguage()
   const params = useParams()
   const leagueId = params.leagueId as string
   const teamId = params.teamId as string
@@ -62,13 +88,13 @@ export default function LeagueActivityPage() {
 
     const result = await activityService.getRadar(leagueId, teamId)
     if (result.error || !result.data) {
-      setError(result.error || 'No se pudo cargar la actividad')
+      setError(t('activity.loadError'))
       setRadar(null)
     } else {
       setRadar(result.data)
     }
     setLoading(false)
-  }, [leagueId, teamId])
+  }, [leagueId, t, teamId])
 
   useEffect(() => {
     void loadRadar()
@@ -84,11 +110,9 @@ export default function LeagueActivityPage() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">
-                  Radar de actividad
+                  {t('activity.title')}
                 </h1>
-                <p className="mt-2 text-gray-600">
-                  Movimientos recientes, presupuesto y balance por mánager.
-                </p>
+                <p className="mt-2 text-gray-600">{t('activity.subtitle')}</p>
               </div>
               <Button
                 variant="outline"
@@ -98,11 +122,11 @@ export default function LeagueActivityPage() {
                 <RefreshCw
                   className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`}
                 />
-                Actualizar
+                {t('common.refresh')}
               </Button>
             </div>
 
-            {loading && <BouncingBallLoader message="Cargando actividad..." />}
+            {loading && <BouncingBallLoader message={t('activity.loading')} />}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -117,14 +141,16 @@ export default function LeagueActivityPage() {
                     <CardContent className="flex items-center gap-3">
                       <CalendarDays className="w-8 h-8 text-blue-600" />
                       <div>
-                        <p className="text-sm text-gray-500">Jornada actual</p>
+                        <p className="text-sm text-gray-500">
+                          {t('activity.currentWeek')}
+                        </p>
                         <p className="text-2xl font-bold">
                           {radar.currentWeek.weekNumber}
                         </p>
                         <p className="text-xs text-gray-500">
                           {radar.currentWeek.isLive
-                            ? 'En juego'
-                            : 'No iniciada'}
+                            ? t('dashboard.live')
+                            : t('activity.notStarted')}
                         </p>
                       </div>
                     </CardContent>
@@ -134,7 +160,9 @@ export default function LeagueActivityPage() {
                     <CardContent className="flex items-center gap-3">
                       <CircleDollarSign className="w-8 h-8 text-green-600" />
                       <div>
-                        <p className="text-sm text-gray-500">Presupuesto</p>
+                        <p className="text-sm text-gray-500">
+                          {t('activity.budget')}
+                        </p>
                         <p className="text-2xl font-bold">
                           {formatCurrency(radar.money.teamMoney)}
                         </p>
@@ -146,7 +174,9 @@ export default function LeagueActivityPage() {
                     <CardContent className="flex items-center gap-3">
                       <TrendingUp className="w-8 h-8 text-purple-600" />
                       <div>
-                        <p className="text-sm text-gray-500">Inversión</p>
+                        <p className="text-sm text-gray-500">
+                          {t('activity.investment')}
+                        </p>
                         <p className="text-2xl font-bold">
                           {formatCurrency(radar.money.teamInvestment)}
                         </p>
@@ -159,7 +189,7 @@ export default function LeagueActivityPage() {
                       <Activity className="w-8 h-8 text-orange-600" />
                       <div>
                         <p className="text-sm text-gray-500">
-                          Volumen reciente
+                          {t('activity.volume')}
                         </p>
                         <p className="text-2xl font-bold">
                           {formatCurrency(radar.totalVolume)}
@@ -172,7 +202,7 @@ export default function LeagueActivityPage() {
                 {radar.managerSummaries.length > 0 && (
                   <section>
                     <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                      Balance reciente por mánager
+                      {t('activity.balance')}
                     </h2>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {radar.managerSummaries.map((summary) => (
@@ -186,19 +216,25 @@ export default function LeagueActivityPage() {
                             </div>
                             <div className="grid grid-cols-3 gap-2 text-sm">
                               <div>
-                                <p className="text-gray-500">Acciones</p>
+                                <p className="text-gray-500">
+                                  {t('activity.actions')}
+                                </p>
                                 <p className="font-semibold">
                                   {summary.activityCount}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-gray-500">Gasto</p>
+                                <p className="text-gray-500">
+                                  {t('activity.spent')}
+                                </p>
                                 <p className="font-semibold text-red-600">
                                   {formatCurrency(summary.spent)}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-gray-500">Ingreso</p>
+                                <p className="text-gray-500">
+                                  {t('activity.earned')}
+                                </p>
                                 <p className="font-semibold text-green-600">
                                   {formatCurrency(summary.earned)}
                                 </p>
@@ -213,13 +249,13 @@ export default function LeagueActivityPage() {
 
                 <section>
                   <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                    Últimos movimientos
+                    {t('activity.latest')}
                   </h2>
 
                   {radar.activities.length === 0 ? (
                     <Card>
                       <CardContent className="text-center py-8 text-gray-600">
-                        Todavía no hay actividad en esta liga.
+                        {t('activity.empty')}
                       </CardContent>
                     </Card>
                   ) : (
@@ -230,14 +266,18 @@ export default function LeagueActivityPage() {
                             <div>
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="text-xs font-medium rounded-full bg-blue-50 text-blue-700 px-2 py-1">
-                                  {activity.label}
+                                  {getActivityLabel(activity, t)}
                                 </span>
                                 <time className="text-xs text-gray-500">
-                                  {formatActivityDate(activity.createdAt)}
+                                  {formatActivityDate(
+                                    activity.createdAt,
+                                    locale,
+                                    t
+                                  )}
                                 </time>
                               </div>
                               <p className="text-gray-900">
-                                {getActivityDescription(activity)}
+                                {getActivityDescription(activity, t)}
                               </p>
                             </div>
 
