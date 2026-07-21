@@ -52,9 +52,10 @@ consciente para reducir el impacto de XSS sobre el flujo de autenticación.
 - No añadir analítica o scripts de terceros sin actualizar y revisar la CSP.
 
 Una cookie HttpOnly reduce el robo de tokens mediante XSS, pero no elimina el
-riesgo de acciones iniciadas desde una página comprometida. Por eso las
-mutaciones requieren protección CSRF, confirmación UI y tests adicionales antes
-de volver a habilitarse.
+riesgo de acciones iniciadas desde una página comprometida. La publicación de
+jugadores limita ruta y body, exige un origen válido y muestra confirmación UI.
+El resto de mutaciones requiere las mismas garantías y tests adicionales antes
+de habilitarse.
 
 ## Referencias
 

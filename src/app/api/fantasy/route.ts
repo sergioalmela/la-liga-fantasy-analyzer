@@ -3,10 +3,15 @@ import { AUTH_COOKIE_NAME } from '@/lib/auth-session'
 import {
   getAllowedFantasyPath,
   preserveUpstreamResponse,
+  validateFantasyRequestBody,
 } from '@/lib/fantasy-proxy'
 
 const API_BASE_URL = 'https://fantasy-api.llt-services.com/api'
 const MAX_REQUEST_BODY_BYTES = 64 * 1024
+
+function isSameOrigin(request: NextRequest): boolean {
+  return request.headers.get('origin') === request.nextUrl.origin
+}
 
 async function proxyRequest(request: NextRequest): Promise<Response> {
   const method = request.method.toUpperCase()
@@ -16,6 +21,13 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
   if (!path) {
     return Response.json(
       { error: 'Fantasy API path or method is not allowed' },
+      { status: 403 }
+    )
+  }
+
+  if (method !== 'GET' && !isSameOrigin(request)) {
+    return Response.json(
+      { error: 'Request origin is not allowed' },
       { status: 403 }
     )
   }
@@ -33,11 +45,11 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
     const authHeader =
       request.headers.get('authorization') ||
       (sessionToken ? `Bearer ${sessionToken}` : null)
-    const body = method === 'GET' ? undefined : await request.text()
+    const rawBody = method === 'GET' ? '' : await request.text()
 
     if (
-      body &&
-      new TextEncoder().encode(body).byteLength > MAX_REQUEST_BODY_BYTES
+      rawBody &&
+      new TextEncoder().encode(rawBody).byteLength > MAX_REQUEST_BODY_BYTES
     ) {
       return Response.json(
         { error: 'Request body is too large' },
@@ -45,14 +57,31 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
       )
     }
 
+    if (method !== 'GET' && !authHeader) {
+      return Response.json(
+        { error: 'Authentication is required' },
+        { status: 401 }
+      )
+    }
+
+    const validatedBody =
+      method === 'GET'
+        ? { valid: true as const }
+        : validateFantasyRequestBody(method, rawBody)
+    if (!validatedBody.valid) {
+      return Response.json({ error: 'Invalid request body' }, { status: 400 })
+    }
+
+    const body = validatedBody.body
+
     const headers = new Headers({ Accept: 'application/json', 'x-lang': 'es' })
     if (authHeader) headers.set('Authorization', authHeader)
-    if (body) headers.set('Content-Type', 'application/json')
+    if (body !== undefined) headers.set('Content-Type', 'application/json')
 
     const upstream = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
-      body: body || undefined,
+      body,
       cache: 'no-store',
     })
 

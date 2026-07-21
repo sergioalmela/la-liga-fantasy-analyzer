@@ -26,13 +26,22 @@ const READ_PATHS = [
   ),
 ]
 
+const WRITE_PATHS: Partial<Record<string, RegExp[]>> = {
+  POST: [new RegExp(`^${COMPETITION_PATH}/league/${SEGMENT}/market/sell$`)],
+  DELETE: [
+    new RegExp(
+      `^${COMPETITION_PATH}/league/${SEGMENT}/market/${SEGMENT}/delete$`
+    ),
+  ],
+}
+
 const ALLOWED_QUERY_PARAMETERS = new Set(['weekNumber', 'x-lang'])
 
 export function getAllowedFantasyPath(
   rawPath: string | null,
   method: string
 ): string | null {
-  if (!rawPath || method !== 'GET') return null
+  if (!rawPath) return null
 
   const withoutApiPrefix = rawPath.startsWith('/api/')
     ? rawPath.slice(4)
@@ -52,7 +61,13 @@ export function getAllowedFantasyPath(
   }
 
   if (parsed.origin !== 'https://fantasy-proxy.invalid') return null
-  if (!READ_PATHS.some((pattern) => pattern.test(parsed.pathname))) return null
+
+  const normalizedMethod = method.toUpperCase()
+  const allowedPatterns =
+    normalizedMethod === 'GET' ? READ_PATHS : WRITE_PATHS[normalizedMethod]
+  if (!allowedPatterns?.some((pattern) => pattern.test(parsed.pathname))) {
+    return null
+  }
 
   const seenQueryParameters = new Set<string>()
   for (const [key, value] of parsed.searchParams.entries()) {
@@ -64,6 +79,54 @@ export function getAllowedFantasyPath(
   }
 
   return `${parsed.pathname}${parsed.search}`
+}
+
+export interface ValidatedRequestBody {
+  valid: boolean
+  body?: string
+}
+
+export function validateFantasyRequestBody(
+  method: string,
+  rawBody: string
+): ValidatedRequestBody {
+  const normalizedMethod = method.toUpperCase()
+
+  if (normalizedMethod === 'DELETE') {
+    return rawBody.trim() ? { valid: false } : { valid: true }
+  }
+
+  if (normalizedMethod !== 'POST') return { valid: false }
+
+  try {
+    const value = JSON.parse(rawBody) as unknown
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return { valid: false }
+    }
+
+    const record = value as Record<string, unknown>
+    const keys = Object.keys(record).sort()
+    if (keys.join(',') !== 'playerId,salePrice') return { valid: false }
+
+    const playerId = record.playerId
+    const salePrice = record.salePrice
+    if (
+      typeof playerId !== 'string' ||
+      !new RegExp(`^${SEGMENT}$`).test(playerId) ||
+      typeof salePrice !== 'number' ||
+      !Number.isSafeInteger(salePrice) ||
+      salePrice <= 0
+    ) {
+      return { valid: false }
+    }
+
+    return {
+      valid: true,
+      body: JSON.stringify({ playerId, salePrice }),
+    }
+  } catch {
+    return { valid: false }
+  }
 }
 
 export async function preserveUpstreamResponse(

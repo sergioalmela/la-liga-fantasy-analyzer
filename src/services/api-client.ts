@@ -32,6 +32,12 @@ export const endpoints = {
       `${CMP}/leagues/${leagueId}/teams/${teamId}`,
     market: (leagueId: string) => `${CMP}/league/${leagueId}/market`,
   },
+  market: {
+    sellPlayer: (leagueId: string) =>
+      `${CMP}/league/${leagueId}/market/sell?x-lang=es`,
+    withdrawPlayer: (leagueId: string, marketId: string) =>
+      `${CMP}/league/${leagueId}/market/${marketId}/delete?x-lang=es`,
+  },
   stats: {
     weekMatches: (weekId: string) => `/stats${CMP}/stats/week/${weekId}`,
   },

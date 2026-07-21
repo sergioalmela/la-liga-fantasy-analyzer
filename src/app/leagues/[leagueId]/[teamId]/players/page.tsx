@@ -1,14 +1,16 @@
 'use client'
 
-import { Users } from 'lucide-react'
+import { RefreshCw, Users } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
+import { refreshMarketListings } from '@/services/market-service'
 import {
   calculateSummaryStats,
   getPlayersWithExpiringProtection,
@@ -25,6 +27,12 @@ export default function TeamPlayersPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [refreshingMarket, setRefreshingMarket] = useState(false)
+  const [marketStatus, setMarketStatus] = useState<{
+    tone: 'progress' | 'success' | 'warning' | 'error'
+    message: string
+    failures?: string[]
+  } | null>(null)
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -46,6 +54,46 @@ export default function TeamPlayersPage() {
     loadPlayers()
   }, [leagueId, teamId])
 
+  const handleRefreshMarket = async () => {
+    if (players.length === 0 || refreshingMarket) return
+
+    const listedPlayers = players.filter((player) => player.saleInfo)
+    const unlistedPlayers = players.length - listedPlayers.length
+    const confirmed = window.confirm(
+      `This will renew ${listedPlayers.length} existing listings and add ${unlistedPlayers} players to the market at their current market value. Existing listings must be withdrawn before they can be renewed. Continue?`
+    )
+    if (!confirmed) return
+
+    setRefreshingMarket(true)
+    setMarketStatus({
+      tone: 'progress',
+      message: `Processing 0 of ${players.length} players...`,
+    })
+
+    const { renewed, added, failures } = await refreshMarketListings(
+      leagueId,
+      players,
+      (current, total, playerName) => {
+        setMarketStatus({
+          tone: 'progress',
+          message: `Processing ${current} of ${total}: ${playerName}`,
+        })
+      }
+    )
+
+    const updatedPlayers = await teamService.getPlayers(leagueId, teamId)
+    if (updatedPlayers.data) setPlayers(updatedPlayers.data)
+
+    setMarketStatus({
+      tone: failures.length > 0 ? 'warning' : 'success',
+      message: `${renewed} listings renewed and ${added} players added.${
+        failures.length > 0 ? ` ${failures.length} failed.` : ''
+      }`,
+      ...(failures.length > 0 ? { failures } : {}),
+    })
+    setRefreshingMarket(false)
+  }
+
   const summaryStats = calculateSummaryStats(players)
   const playersWithLowBuyout = getPlayersWithLowBuyout(players)
   const playersWithExpiringProtection =
@@ -59,10 +107,47 @@ export default function TeamPlayersPage() {
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">My Players</h1>
-              <p className="mt-2 text-gray-600">
-                Review your current squad and monitor player values
-              </p>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900">
+                    My Players
+                  </h1>
+                  <p className="mt-2 text-gray-600">
+                    Review your current squad and monitor player values
+                  </p>
+                </div>
+                <Button
+                  onClick={() => void handleRefreshMarket()}
+                  disabled={refreshingMarket || loading || players.length === 0}
+                  className="gap-2"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${refreshingMarket ? 'animate-spin' : ''}`}
+                  />
+                  Add / renew all on market
+                </Button>
+              </div>
+
+              {marketStatus && (
+                <div
+                  className={`mt-4 rounded border px-4 py-3 text-sm ${
+                    marketStatus.tone === 'success'
+                      ? 'border-green-200 bg-green-50 text-green-700'
+                      : marketStatus.tone === 'progress'
+                        ? 'border-blue-200 bg-blue-50 text-blue-700'
+                        : marketStatus.tone === 'warning'
+                          ? 'border-orange-200 bg-orange-50 text-orange-700'
+                          : 'border-red-200 bg-red-50 text-red-700'
+                  }`}
+                >
+                  <p>{marketStatus.message}</p>
+                  {marketStatus.failures && (
+                    <p className="mt-2 whitespace-pre-line">
+                      {marketStatus.failures.join('\n')}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Summary Stats */}

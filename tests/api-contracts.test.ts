@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import type { Player } from '../src/entities/player.ts'
 import { createContentSecurityPolicy } from '../src/lib/content-security-policy.ts'
 import {
   getAllowedFantasyPath,
   preserveUpstreamResponse,
+  validateFantasyRequestBody,
 } from '../src/lib/fantasy-proxy.ts'
 import { buildActivityRadar } from '../src/services/activity-service.ts'
 import { ApiClient } from '../src/services/api-client.ts'
@@ -18,6 +20,7 @@ import {
   parseTeamPlayers,
   parseTeamsMaster,
 } from '../src/services/api-contracts.ts'
+import { refreshMarketListings } from '../src/services/market-service.ts'
 
 const playerMaster = {
   id: '68',
@@ -28,6 +31,21 @@ const playerMaster = {
   marketValue: '34914257',
   points: 0,
   averagePoints: 0,
+}
+
+function createPlayer(id: string, overrides: Partial<Player> = {}): Player {
+  return {
+    id,
+    playerTeamId: `team-${id}`,
+    name: `Player ${id}`,
+    positionId: 1,
+    playerStatus: 'ok',
+    team: { id: 'team', name: 'Example FC' },
+    marketValue: 10_000_000,
+    points: 0,
+    averagePoints: 0,
+    ...overrides,
+  }
 }
 
 test('normalizes league arrays and numeric IDs', () => {
@@ -238,6 +256,120 @@ test('proxy allowlist rejects external URLs and legacy endpoints', () => {
   )
   assert.equal(getAllowedFantasyPath('/v4/leagues', 'GET'), null)
   assert.equal(getAllowedFantasyPath('/v1/competition/1/leagues', 'POST'), null)
+  assert.equal(
+    getAllowedFantasyPath(
+      '/v1/competition/1/league/league-1/market/sell?x-lang=es',
+      'POST'
+    ),
+    '/v1/competition/1/league/league-1/market/sell?x-lang=es'
+  )
+  assert.equal(
+    getAllowedFantasyPath(
+      '/v1/competition/1/league/league-1/market/market-1/delete?x-lang=es',
+      'DELETE'
+    ),
+    '/v1/competition/1/league/league-1/market/market-1/delete?x-lang=es'
+  )
+  assert.equal(
+    getAllowedFantasyPath(
+      '/v1/competition/1/league/league-1/market/market-1/bid',
+      'POST'
+    ),
+    null
+  )
+})
+
+test('proxy accepts only a minimal market listing body', () => {
+  assert.deepEqual(
+    validateFantasyRequestBody(
+      'POST',
+      JSON.stringify({ playerId: 'player-1', salePrice: 25_000_000 })
+    ),
+    {
+      valid: true,
+      body: JSON.stringify({ playerId: 'player-1', salePrice: 25_000_000 }),
+    }
+  )
+  assert.deepEqual(
+    validateFantasyRequestBody(
+      'POST',
+      JSON.stringify({
+        playerId: 'player-1',
+        salePrice: 25_000_000,
+        money: 1,
+      })
+    ),
+    { valid: false }
+  )
+  assert.deepEqual(
+    validateFantasyRequestBody(
+      'POST',
+      JSON.stringify({ playerId: '../player-1', salePrice: 25_000_000 })
+    ),
+    { valid: false }
+  )
+  assert.deepEqual(validateFantasyRequestBody('DELETE', ''), { valid: true })
+  assert.deepEqual(validateFantasyRequestBody('DELETE', '{}'), {
+    valid: false,
+  })
+})
+
+test('renews and adds market listings sequentially with partial failure details', async () => {
+  const calls: string[] = []
+  const progress: string[] = []
+  const players = [
+    createPlayer('1', {
+      saleInfo: {
+        marketId: 'market-1',
+        salePrice: 9_000_000,
+        expirationDate: '2026-07-22T12:00:00Z',
+        numberOfOffers: 0,
+      },
+    }),
+    createPlayer('2'),
+    createPlayer('3', {
+      saleInfo: {
+        marketId: 'market-3',
+        salePrice: 9_000_000,
+        expirationDate: '2026-07-22T12:00:00Z',
+        numberOfOffers: 0,
+      },
+    }),
+  ]
+
+  const result = await refreshMarketListings(
+    'league-1',
+    players,
+    (current, total, name) => progress.push(`${current}/${total}:${name}`),
+    {
+      async withdrawPlayer(_leagueId, marketId) {
+        calls.push(`withdraw:${marketId}`)
+        return { data: null, error: null }
+      },
+      async listPlayer(_leagueId, playerId) {
+        calls.push(`list:${playerId}`)
+        return playerId === 'team-3'
+          ? { data: null, error: 'upstream rejected listing' }
+          : { data: null, error: null }
+      },
+    }
+  )
+
+  assert.deepEqual(calls, [
+    'withdraw:market-1',
+    'list:team-1',
+    'list:team-2',
+    'withdraw:market-3',
+    'list:team-3',
+  ])
+  assert.deepEqual(progress, ['1/3:Player 1', '2/3:Player 2', '3/3:Player 3'])
+  assert.deepEqual(result, {
+    renewed: 1,
+    added: 1,
+    failures: [
+      'Player 3: listing was withdrawn but could not be renewed (upstream rejected listing)',
+    ],
+  })
 })
 
 test('CSP permits Next tooling only in development', () => {

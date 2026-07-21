@@ -13,8 +13,9 @@ cláusulas y el mercado de LALIGA Fantasy durante la temporada 2026/27.
 - Validación runtime de las respuestas remotas antes de entregarlas a React.
 - Sesión mediante cookie `HttpOnly`, sin guardar el bearer token en
   `localStorage`.
-- Operaciones de mercado desactivadas hasta verificar sus contratos y añadir
-  confirmaciones específicas.
+- Publicación masiva de la plantilla al valor de mercado, renovando anuncios
+  existentes con confirmación previa y resultado por jugador.
+- Pujas, ofertas, cláusulas y otras mutaciones permanecen desactivadas.
 - Tendencias históricas desactivadas: el endpoint anterior devuelve datos
   congelados de la temporada 2025/26.
 
