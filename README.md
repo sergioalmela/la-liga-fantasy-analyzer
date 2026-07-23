@@ -34,10 +34,10 @@ sin previo aviso al comenzar una temporada.
 
 ## Requisitos
 
-- Node.js `>=20.9.0` (se recomienda Node 24).
+- Node.js `>=22.13.0` (se recomienda Node 24).
 - Corepack, incluido con las distribuciones compatibles de Node.
 
-El proyecto fija `pnpm@11.15.1` para que las instalaciones sean reproducibles.
+El proyecto fija `pnpm@11.16.0` para que las instalaciones sean reproducibles.
 
 ## Instalación
 
