@@ -83,9 +83,10 @@ La contraseña se envía por HTTPS al backend Next de esta aplicación, se reenv
 una vez al proveedor de LALIGA y no se persiste. El access token resultante se
 guarda en una cookie `HttpOnly`, `SameSite=Strict` y `Secure` en producción.
 Los datos Fantasy atraviesan el proxy Next, pero no se almacenan en una base de
-datos del proyecto. El navegador conserva únicamente el idioma elegido y hasta
-14 días de valores de mercado públicos para calcular tendencias; nunca guarda
-credenciales ni tokens accesibles desde JavaScript.
+datos del proyecto. El histórico de valor procede del endpoint oficial de la
+temporada actual y se conserva únicamente en memoria durante seis horas para
+evitar peticiones repetidas. El navegador persiste solo el idioma elegido;
+nunca guarda credenciales ni tokens accesibles desde JavaScript.
 
 Consulta [docs/authentication.md](docs/authentication.md) antes de desplegar la
 aplicación públicamente.

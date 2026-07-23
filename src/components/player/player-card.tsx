@@ -30,6 +30,7 @@ interface PlayerCardProps {
   player: Player
   detailsHref?: string
   marketTrend?: MarketTrend | null
+  marketTrendLoading?: boolean
   showMarketTrend?: boolean
 }
 
@@ -37,6 +38,7 @@ export function PlayerCard({
   player,
   detailsHref,
   marketTrend,
+  marketTrendLoading = false,
   showMarketTrend = false,
 }: PlayerCardProps) {
   const { locale, t } = useLanguage()
@@ -69,8 +71,14 @@ export function PlayerCard({
     new Intl.NumberFormat(locale === 'es' ? 'es-ES' : 'en-GB', {
       style: 'currency',
       currency: 'EUR',
-      maximumFractionDigits: 0,
+      notation: 'compact',
+      maximumFractionDigits: 1,
     }).format(amount)
+  const formatTrendPercentage = (percentage: number): string =>
+    new Intl.NumberFormat(locale === 'es' ? 'es-ES' : 'en-GB', {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 0,
+    }).format(percentage)
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -93,38 +101,60 @@ export function PlayerCard({
           <div className="flex items-start justify-between gap-3 border-t pt-3 text-sm">
             <span className="text-gray-600">{t('trend.label')}</span>
             {marketTrend ? (
-              <span
-                className={`flex items-center gap-1 text-right font-medium ${
-                  marketTrend.direction === 'up'
-                    ? 'text-green-600'
-                    : marketTrend.direction === 'down'
-                      ? 'text-red-600'
-                      : 'text-gray-600'
-                }`}
-              >
-                {marketTrend.direction === 'up' ? (
-                  <TrendingUp className="h-4 w-4" />
-                ) : marketTrend.direction === 'down' ? (
-                  <TrendingDown className="h-4 w-4" />
-                ) : (
-                  <Minus className="h-4 w-4" />
-                )}
-                <span>
-                  {t(`trend.${marketTrend.direction}`)}{' '}
-                  {marketTrend.change > 0
-                    ? '+'
-                    : marketTrend.change < 0
-                      ? '-'
-                      : ''}
-                  {formatMarketChange(Math.abs(marketTrend.change))} (
-                  {marketTrend.changePercent > 0 ? '+' : ''}
-                  {marketTrend.changePercent}%) ·{' '}
-                  {t('trend.days', { days: marketTrend.days })}
+              <div className="flex flex-col items-end gap-1.5">
+                <span
+                  className={`flex items-center gap-1 text-right font-semibold ${
+                    marketTrend.direction === 'up'
+                      ? 'text-green-600'
+                      : marketTrend.direction === 'down'
+                        ? 'text-red-600'
+                        : 'text-gray-600'
+                  }`}
+                >
+                  {marketTrend.direction === 'up' ? (
+                    <TrendingUp className="h-4 w-4" />
+                  ) : marketTrend.direction === 'down' ? (
+                    <TrendingDown className="h-4 w-4" />
+                  ) : (
+                    <Minus className="h-4 w-4" />
+                  )}
+                  <span>
+                    {t('trend.momentum')}{' '}
+                    {marketTrend.momentumScore > 0 ? '+' : ''}
+                    {formatTrendPercentage(marketTrend.momentumScore)}%
+                  </span>
                 </span>
-              </span>
+                {marketTrend.periods.map((period) => (
+                  <span
+                    key={period.days}
+                    className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium ${
+                      period.direction === 'up'
+                        ? 'bg-green-100 text-green-700'
+                        : period.direction === 'down'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    <span>{t('trend.period', { days: period.days })}</span>
+                    {period.direction === 'up' ? (
+                      <TrendingUp className="h-3.5 w-3.5" />
+                    ) : period.direction === 'down' ? (
+                      <TrendingDown className="h-3.5 w-3.5" />
+                    ) : (
+                      <Minus className="h-3.5 w-3.5" />
+                    )}
+                    <span>
+                      {period.change > 0 ? '+' : period.change < 0 ? '-' : ''}
+                      {formatMarketChange(Math.abs(period.change))} ·{' '}
+                      {period.changePercent > 0 ? '+' : ''}
+                      {formatTrendPercentage(period.changePercent)}%
+                    </span>
+                  </span>
+                ))}
+              </div>
             ) : (
               <span className="text-right text-xs text-gray-500">
-                {t('trend.collecting')}
+                {t(marketTrendLoading ? 'trend.loading' : 'trend.unavailable')}
               </span>
             )}
           </div>

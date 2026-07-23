@@ -13,6 +13,10 @@ import { Player } from '@/entities/player'
 import { useLanguage } from '@/i18n/language-provider'
 import { refreshMarketListings } from '@/services/market-service'
 import {
+  getMarketTrends,
+  type MarketTrend,
+} from '@/services/market-trend-service'
+import {
   calculateSummaryStats,
   getPlayersWithExpiringProtection,
   getPlayersWithLowBuyout,
@@ -29,6 +33,8 @@ export default function TeamPlayersPage() {
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [trends, setTrends] = useState<Map<string, MarketTrend>>(new Map())
+  const [trendsLoading, setTrendsLoading] = useState(false)
   const [refreshingMarket, setRefreshingMarket] = useState(false)
   const [marketStatus, setMarketStatus] = useState<{
     tone: 'progress' | 'success' | 'warning' | 'error'
@@ -37,6 +43,8 @@ export default function TeamPlayersPage() {
   } | null>(null)
 
   useEffect(() => {
+    let cancelled = false
+
     const loadPlayers = async () => {
       try {
         const result = await teamService.getPlayers(leagueId, teamId)
@@ -44,7 +52,16 @@ export default function TeamPlayersPage() {
         if (result.error) {
           setError(t('players.loadError'))
         } else {
-          setPlayers(result.data || [])
+          const loadedPlayers = result.data || []
+          setPlayers(loadedPlayers)
+          setTrendsLoading(true)
+          getMarketTrends(loadedPlayers)
+            .then((marketTrends) => {
+              if (!cancelled) setTrends(marketTrends)
+            })
+            .finally(() => {
+              if (!cancelled) setTrendsLoading(false)
+            })
         }
       } catch {
         setError(t('players.loadError'))
@@ -54,6 +71,9 @@ export default function TeamPlayersPage() {
     }
 
     loadPlayers()
+    return () => {
+      cancelled = true
+    }
   }, [leagueId, t, teamId])
 
   const handleRefreshMarket = async () => {
@@ -112,6 +132,9 @@ export default function TeamPlayersPage() {
   const playersWithLowBuyout = getPlayersWithLowBuyout(players)
   const playersWithExpiringProtection =
     getPlayersWithExpiringProtection(players)
+  const fallingPlayers = players.filter(
+    (player) => trends.get(player.id)?.direction === 'down'
+  )
 
   return (
     <AuthGuard>
@@ -212,8 +235,27 @@ export default function TeamPlayersPage() {
             {!loading &&
               !error &&
               (playersWithLowBuyout.length > 0 ||
-                playersWithExpiringProtection.length > 0) && (
+                playersWithExpiringProtection.length > 0 ||
+                fallingPlayers.length > 0) && (
                 <div className="mb-8 space-y-4">
+                  {fallingPlayers.length > 0 && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                      <h3 className="mb-2 text-sm font-medium text-red-900">
+                        {t('players.falling', {
+                          count: fallingPlayers.length,
+                        })}
+                      </h3>
+                      <p className="mb-2 text-xs text-red-600">
+                        {t('players.fallingHint')}
+                      </p>
+                      <div className="text-sm text-red-700">
+                        {fallingPlayers
+                          .map((player) => player.nickname || player.name)
+                          .join(', ')}
+                      </div>
+                    </div>
+                  )}
+
                   {playersWithLowBuyout.length > 0 && (
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                       <h3 className="text-sm font-medium text-orange-900 mb-2">
@@ -271,6 +313,9 @@ export default function TeamPlayersPage() {
                     key={player.id}
                     player={player}
                     detailsHref={`/leagues/${leagueId}/players/${player.id}`}
+                    showMarketTrend
+                    marketTrend={trends.get(player.id)}
+                    marketTrendLoading={trendsLoading}
                   />
                 ))}
               </div>

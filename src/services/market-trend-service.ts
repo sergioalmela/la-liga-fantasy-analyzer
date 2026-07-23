@@ -1,146 +1,164 @@
 import type { Player } from '@/entities/player'
+import { apiClient, endpoints } from './api-client.ts'
 
-const STORAGE_KEY = 'laliga-fantasy-market-values-v1'
-const RETENTION_DAYS = 14
-const TREND_WINDOW_DAYS = 7
+const TREND_PERIODS = [1, 3, 7] as const
+const PERIOD_WEIGHTS = { 1: 0.4, 3: 0.4, 7: 0.2 } as const
 const DAY_IN_MS = 24 * 60 * 60 * 1000
+const MAX_CONCURRENT_REQUESTS = 6
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000
 
-export interface MarketValueSnapshot {
-  day: string
-  values: Record<string, number>
+export type MarketTrendDays = (typeof TREND_PERIODS)[number]
+
+export interface MarketValuePoint {
+  marketValue: number
+  date: string
 }
 
-export interface MarketValueHistory {
-  version: 1
-  snapshots: MarketValueSnapshot[]
+export interface MarketTrendPeriod {
+  days: MarketTrendDays
+  direction: 'up' | 'down' | 'stable'
+  change: number
+  changePercent: number
 }
 
 export interface MarketTrend {
   direction: 'up' | 'down' | 'stable'
-  change: number
-  changePercent: number
-  days: number
+  momentumScore: number
+  periods: MarketTrendPeriod[]
 }
 
-function dayKey(date: Date): string {
-  return date.toISOString().slice(0, 10)
+interface CachedTrend {
+  expiresAt: number
+  promise: Promise<MarketTrend | null>
 }
 
-function dayTimestamp(day: string): number {
-  return Date.parse(`${day}T00:00:00.000Z`)
+const trendCache = new Map<string, CachedTrend>()
+
+function asPositiveInteger(value: unknown): number | null {
+  const parsed =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string' && value.trim()
+        ? Number(value)
+        : Number.NaN
+
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null
 }
 
-function isValidHistory(value: unknown): value is MarketValueHistory {
-  if (!value || typeof value !== 'object') return false
-  const record = value as Record<string, unknown>
-  if (record.version !== 1 || !Array.isArray(record.snapshots)) return false
+export function parseMarketValueHistory(value: unknown): MarketValuePoint[] {
+  if (!Array.isArray(value)) return []
 
-  return record.snapshots.every((snapshot) => {
-    if (!snapshot || typeof snapshot !== 'object') return false
-    const entry = snapshot as Record<string, unknown>
-    if (
-      typeof entry.day !== 'string' ||
-      !/^\d{4}-\d{2}-\d{2}$/.test(entry.day)
-    ) {
-      return false
-    }
-    if (!entry.values || typeof entry.values !== 'object') return false
-    return Object.values(entry.values).every(
-      (marketValue) =>
-        typeof marketValue === 'number' &&
-        Number.isSafeInteger(marketValue) &&
-        marketValue > 0
+  const byTimestamp = new Map<number, MarketValuePoint>()
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) continue
+
+    const record = entry as Record<string, unknown>
+    const marketValue = asPositiveInteger(record.marketValue)
+    const date = typeof record.date === 'string' ? record.date : ''
+    const timestamp = Date.parse(date)
+    if (!marketValue || !date || !Number.isFinite(timestamp)) continue
+
+    byTimestamp.set(timestamp, { marketValue, date })
+  }
+
+  return [...byTimestamp.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([, point]) => point)
+}
+
+export function calculateMarketTrend(history: unknown): MarketTrend | null {
+  const points = parseMarketValueHistory(history)
+  const latest = points.at(-1)
+  if (!latest) return null
+
+  const latestTimestamp = Date.parse(latest.date)
+  const periods = TREND_PERIODS.flatMap((days): MarketTrendPeriod[] => {
+    const targetTimestamp = latestTimestamp - days * DAY_IN_MS
+    const baseline = points.findLast(
+      (point) => Date.parse(point.date) <= targetTimestamp
     )
+    if (!baseline) return []
+
+    const change = latest.marketValue - baseline.marketValue
+    const changePercent = Number(
+      ((change / baseline.marketValue) * 100).toFixed(2)
+    )
+
+    return [
+      {
+        days,
+        direction: change > 0 ? 'up' : change < 0 ? 'down' : 'stable',
+        change,
+        changePercent,
+      },
+    ]
   })
-}
 
-export function updateMarketValueHistory(
-  history: MarketValueHistory,
-  players: Player[],
-  now: Date
-): MarketValueHistory {
-  const today = dayKey(now)
-  const minimumTimestamp =
-    dayTimestamp(today) - (RETENTION_DAYS - 1) * DAY_IN_MS
-  const snapshots = history.snapshots
-    .filter((snapshot) => dayTimestamp(snapshot.day) >= minimumTimestamp)
-    .map((snapshot) => ({ ...snapshot, values: { ...snapshot.values } }))
-  let current = snapshots.find((snapshot) => snapshot.day === today)
+  if (periods.length === 0) return null
 
-  if (!current) {
-    current = { day: today, values: {} }
-    snapshots.push(current)
-  }
-
-  for (const player of players) {
-    if (Number.isSafeInteger(player.marketValue) && player.marketValue > 0) {
-      current.values[player.id] = player.marketValue
-    }
-  }
+  const availableWeight = periods.reduce(
+    (total, period) => total + PERIOD_WEIGHTS[period.days],
+    0
+  )
+  const momentumScore = Number(
+    (
+      periods.reduce(
+        (total, period) =>
+          total + period.changePercent * PERIOD_WEIGHTS[period.days],
+        0
+      ) / availableWeight
+    ).toFixed(2)
+  )
 
   return {
-    version: 1,
-    snapshots: snapshots.sort((left, right) =>
-      left.day.localeCompare(right.day)
-    ),
+    direction: momentumScore > 0 ? 'up' : momentumScore < 0 ? 'down' : 'stable',
+    momentumScore,
+    periods,
   }
 }
 
-export function buildMarketTrends(
-  history: MarketValueHistory,
-  players: Player[],
-  now: Date
-): Map<string, MarketTrend> {
+async function fetchPlayerMarketTrend(
+  playerId: string
+): Promise<MarketTrend | null> {
+  const cached = trendCache.get(playerId)
+  if (cached && cached.expiresAt > Date.now()) return cached.promise
+
+  const promise = apiClient
+    .get<unknown>(endpoints.player.marketValue(playerId))
+    .then((result) => calculateMarketTrend(result.data))
+
+  trendCache.set(playerId, {
+    expiresAt: Date.now() + CACHE_TTL_MS,
+    promise,
+  })
+
+  const trend = await promise
+  if (!trend) trendCache.delete(playerId)
+  return trend
+}
+
+export async function getMarketTrends(
+  players: Player[]
+): Promise<Map<string, MarketTrend>> {
+  const playerIds = [...new Set(players.map((player) => player.id))]
   const trends = new Map<string, MarketTrend>()
-  const today = dayKey(now)
-  const todayTimestamp = dayTimestamp(today)
-  const minimumTimestamp = todayTimestamp - TREND_WINDOW_DAYS * DAY_IN_MS
+  let nextIndex = 0
 
-  for (const player of players) {
-    const baseline = history.snapshots.find((snapshot) => {
-      const timestamp = dayTimestamp(snapshot.day)
-      return (
-        timestamp >= minimumTimestamp &&
-        timestamp < todayTimestamp &&
-        snapshot.values[player.id] !== undefined
-      )
-    })
-    const previousValue = baseline?.values[player.id]
-    if (!baseline || !previousValue || player.marketValue <= 0) continue
-
-    const change = player.marketValue - previousValue
-    const changePercent = Number(((change / previousValue) * 100).toFixed(2))
-    const days = Math.max(
-      1,
-      Math.round((todayTimestamp - dayTimestamp(baseline.day)) / DAY_IN_MS)
-    )
-    trends.set(player.id, {
-      direction: change > 0 ? 'up' : change < 0 ? 'down' : 'stable',
-      change,
-      changePercent,
-      days,
-    })
+  const worker = async () => {
+    while (nextIndex < playerIds.length) {
+      const playerId = playerIds[nextIndex]
+      nextIndex += 1
+      const trend = await fetchPlayerMarketTrend(playerId)
+      if (trend) trends.set(playerId, trend)
+    }
   }
+
+  await Promise.all(
+    Array.from(
+      { length: Math.min(MAX_CONCURRENT_REQUESTS, playerIds.length) },
+      worker
+    )
+  )
 
   return trends
-}
-
-export function recordAndBuildMarketTrends(
-  players: Player[],
-  now = new Date()
-): Map<string, MarketTrend> {
-  if (typeof window === 'undefined') return new Map()
-
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    const parsed: unknown = stored ? JSON.parse(stored) : null
-    const history: MarketValueHistory = isValidHistory(parsed)
-      ? parsed
-      : { version: 1, snapshots: [] }
-    const updated = updateMarketValueHistory(history, players, now)
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-    return buildMarketTrends(updated, players, now)
-  } catch {
-    return new Map()
-  }
 }

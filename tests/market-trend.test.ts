@@ -1,87 +1,89 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import type { Player } from '../src/entities/player.ts'
 import {
-  buildMarketTrends,
-  type MarketValueHistory,
-  updateMarketValueHistory,
+  calculateMarketTrend,
+  parseMarketValueHistory,
 } from '../src/services/market-trend-service.ts'
 
-function player(id: string, marketValue: number): Player {
-  return {
-    id,
-    name: `Player ${id}`,
-    positionId: 1,
-    playerStatus: 'ok',
-    team: { id: 'team', name: 'Team' },
-    marketValue,
-    points: 0,
-    averagePoints: 0,
-  }
-}
+test('parses, sorts and filters Fantasy market-value history', () => {
+  assert.deepEqual(
+    parseMarketValueHistory([
+      {
+        marketValue: '90',
+        date: '2026-07-23T00:00:00+02:00',
+        ignored: 'field',
+      },
+      { marketValue: 88, date: '2026-07-22T00:00:00+02:00' },
+      { marketValue: 0, date: '2026-07-21T00:00:00+02:00' },
+      { marketValue: 87, date: 'not-a-date' },
+      null,
+    ]),
+    [
+      { marketValue: 88, date: '2026-07-22T00:00:00+02:00' },
+      { marketValue: 90, date: '2026-07-23T00:00:00+02:00' },
+    ]
+  )
+})
 
-test('builds a current seven-day trend from daily Fantasy values', () => {
-  const initial: MarketValueHistory = { version: 1, snapshots: [] }
-  const firstDay = updateMarketValueHistory(
-    initial,
-    [player('up', 10_000_000), player('down', 20_000_000)],
-    new Date('2026-07-18T12:00:00Z')
-  )
-  const currentPlayers = [player('up', 11_000_000), player('down', 18_000_000)]
-  const current = updateMarketValueHistory(
-    firstDay,
-    currentPlayers,
-    new Date('2026-07-21T12:00:00Z')
-  )
-  const trends = buildMarketTrends(
-    current,
-    currentPlayers,
-    new Date('2026-07-21T12:00:00Z')
-  )
+test('calculates Cubarsi official 1, 3 and 7 day trends and momentum', () => {
+  const trend = calculateMarketTrend([
+    { marketValue: 75_289_650, date: '2026-07-16T00:00:00+02:00' },
+    { marketValue: 77_714_306, date: '2026-07-17T00:00:00+02:00' },
+    { marketValue: 80_312_626, date: '2026-07-18T00:00:00+02:00' },
+    { marketValue: 82_823_490, date: '2026-07-19T00:00:00+02:00' },
+    { marketValue: 84_479_799, date: '2026-07-20T00:00:00+02:00' },
+    { marketValue: 87_224_185, date: '2026-07-21T00:00:00+02:00' },
+    { marketValue: 88_321_779, date: '2026-07-22T00:00:00+02:00' },
+    { marketValue: 90_605_767, date: '2026-07-23T00:00:00+02:00' },
+  ])
 
-  assert.deepEqual(trends.get('up'), {
+  assert.deepEqual(trend, {
     direction: 'up',
-    change: 1_000_000,
-    changePercent: 10,
-    days: 3,
-  })
-  assert.deepEqual(trends.get('down'), {
-    direction: 'down',
-    change: -2_000_000,
-    changePercent: -10,
-    days: 3,
+    momentumScore: 8,
+    periods: [
+      {
+        days: 1,
+        direction: 'up',
+        change: 2_283_988,
+        changePercent: 2.59,
+      },
+      {
+        days: 3,
+        direction: 'up',
+        change: 6_125_968,
+        changePercent: 7.25,
+      },
+      {
+        days: 7,
+        direction: 'up',
+        change: 15_316_117,
+        changePercent: 20.34,
+      },
+    ],
   })
 })
 
-test('does not invent a trend before a previous daily snapshot exists', () => {
-  const players = [player('new', 10_000_000)]
-  const history = updateMarketValueHistory(
-    { version: 1, snapshots: [] },
-    players,
-    new Date('2026-07-21T12:00:00Z')
-  )
+test('detects falling and stable periods', () => {
+  const falling = calculateMarketTrend([
+    { marketValue: 12_000_000, date: '2026-07-16T00:00:00Z' },
+    { marketValue: 10_000_000, date: '2026-07-23T00:00:00Z' },
+  ])
+  const stable = calculateMarketTrend([
+    { marketValue: 10_000_000, date: '2026-07-22T00:00:00Z' },
+    { marketValue: 10_000_000, date: '2026-07-23T00:00:00Z' },
+  ])
 
+  assert.equal(falling?.direction, 'down')
+  assert.equal(falling?.periods[0]?.changePercent, -16.67)
+  assert.equal(stable?.direction, 'stable')
+  assert.equal(stable?.periods[0]?.changePercent, 0)
+})
+
+test('requires at least one previous daily value', () => {
   assert.equal(
-    buildMarketTrends(history, players, new Date('2026-07-21T12:00:00Z')).size,
-    0
+    calculateMarketTrend([
+      { marketValue: 10_000_000, date: '2026-07-23T00:00:00Z' },
+    ]),
+    null
   )
-})
-
-test('merges market and opportunity values recorded on the same day', () => {
-  const initial: MarketValueHistory = { version: 1, snapshots: [] }
-  const market = updateMarketValueHistory(
-    initial,
-    [player('market', 10_000_000)],
-    new Date('2026-07-21T10:00:00Z')
-  )
-  const merged = updateMarketValueHistory(
-    market,
-    [player('opportunity', 20_000_000)],
-    new Date('2026-07-21T18:00:00Z')
-  )
-
-  assert.deepEqual(merged.snapshots[0].values, {
-    market: 10_000_000,
-    opportunity: 20_000_000,
-  })
 })
