@@ -12,8 +12,8 @@ import { Player } from '@/entities/player'
 import { useLanguage } from '@/i18n/language-provider'
 import { leagueService } from '@/services/league-service'
 import {
+  getMarketTrends,
   type MarketTrend,
-  recordAndBuildMarketTrends,
 } from '@/services/market-trend-service'
 import {
   calculateSummaryStats,
@@ -33,8 +33,11 @@ export default function PlayerOpportunitiesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [trends, setTrends] = useState<Map<string, MarketTrend>>(new Map())
+  const [trendsLoading, setTrendsLoading] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
+
     const loadPlayers = async () => {
       try {
         const usersResult = await leagueService.getUsers(leagueId)
@@ -69,7 +72,14 @@ export default function PlayerOpportunitiesPage() {
               })
 
             setOpponentPlayers(allOpponentPlayersWithOwner)
-            setTrends(recordAndBuildMarketTrends(allOpponentPlayersWithOwner))
+            setTrendsLoading(true)
+            getMarketTrends(allOpponentPlayersWithOwner)
+              .then((marketTrends) => {
+                if (!cancelled) setTrends(marketTrends)
+              })
+              .finally(() => {
+                if (!cancelled) setTrendsLoading(false)
+              })
           }
         }
       } catch {
@@ -80,6 +90,9 @@ export default function PlayerOpportunitiesPage() {
     }
 
     loadPlayers()
+    return () => {
+      cancelled = true
+    }
   }, [leagueId, t, teamId])
 
   const playersWithOpportunities = getPlayersWithLowBuyout(opponentPlayers)
@@ -191,13 +204,14 @@ export default function PlayerOpportunitiesPage() {
                 )}
 
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {sortOpportunities(opponentPlayers).map((player) => (
+                  {sortOpportunities(opponentPlayers, trends).map((player) => (
                     <PlayerCard
                       key={player.id}
                       player={player}
                       detailsHref={`/leagues/${leagueId}/players/${player.id}`}
                       showMarketTrend
                       marketTrend={trends.get(player.id)}
+                      marketTrendLoading={trendsLoading}
                     />
                   ))}
                 </div>

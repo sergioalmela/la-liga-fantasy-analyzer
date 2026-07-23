@@ -10,6 +10,7 @@ export const endpoints = {
   },
   player: {
     all: `${CMP}/players`,
+    marketValue: (playerId: string) => `${CMP}/player/${playerId}/market-value`,
     details: (playerId: string, leagueId: string) =>
       `${CMP}/player/${playerId}/league/${leagueId}`,
   },

@@ -18,6 +18,7 @@ const READ_PATHS = [
   ),
   new RegExp(`^${COMPETITION_PATH}/league/${SEGMENT}/market$`),
   new RegExp(`^${COMPETITION_PATH}/players$`),
+  new RegExp(`^${COMPETITION_PATH}/player/${SEGMENT}/market-value$`),
   new RegExp(`^${COMPETITION_PATH}/player/${SEGMENT}/league/${SEGMENT}$`),
   new RegExp(`^${COMPETITION_PATH}/week/current$`),
   new RegExp(`^${COMPETITION_PATH}/calendar$`),

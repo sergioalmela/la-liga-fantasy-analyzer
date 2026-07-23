@@ -1,4 +1,5 @@
 import { Player } from '@/entities/player'
+import type { MarketTrend } from '@/services/market-trend-service'
 
 export type PlayerSortField =
   | 'name'
@@ -15,16 +16,22 @@ export type SortOrder = 'asc' | 'desc'
  * Smart sorting for opportunities page - prioritizes best deals
  * Priority: Low buyouts > High value > Points performance > Sale urgency
  */
-export function sortOpportunities(players: Player[]): Player[] {
+export function sortOpportunities(
+  players: Player[],
+  trends?: ReadonlyMap<string, MarketTrend>
+): Player[] {
   return [...players].sort((a, b) => {
-    const scoreA = calculateOpportunityScore(a)
-    const scoreB = calculateOpportunityScore(b)
+    const scoreA = calculateOpportunityScore(a, trends?.get(a.id))
+    const scoreB = calculateOpportunityScore(b, trends?.get(b.id))
 
     return scoreB - scoreA
   })
 }
 
-function calculateOpportunityScore(player: Player): number {
+function calculateOpportunityScore(
+  player: Player,
+  trend?: MarketTrend
+): number {
   let score = 0
 
   // 1. Low buyout opportunities get massive boost (40 points)
@@ -40,11 +47,19 @@ function calculateOpportunityScore(player: Player): number {
   const normalizedValue = Math.min(player.marketValue / 50000000, 1) // Cap at 50M
   score += normalizedValue * 20
 
-  // 3. Points performance (0-10 points)
+  // 3. Recent market momentum (-10 to 15 points)
+  if (trend) {
+    score +=
+      trend.momentumScore > 0
+        ? Math.min(trend.momentumScore * 0.5, 15)
+        : Math.max(trend.momentumScore * 0.3, -10)
+  }
+
+  // 4. Points performance (0-10 points)
   const normalizedPoints = Math.min(player.averagePoints / 10, 1)
   score += normalizedPoints * 10
 
-  // 4. Sale urgency bonus (0-5 points)
+  // 5. Sale urgency bonus (0-5 points)
   if (player.saleInfo?.expirationDate) {
     const expirationTime = new Date(player.saleInfo.expirationDate).getTime()
     const hoursLeft = (expirationTime - Date.now()) / (1000 * 60 * 60)

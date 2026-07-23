@@ -438,6 +438,13 @@ test('proxy allowlist rejects external URLs and legacy endpoints', () => {
     ),
     '/v1/competition/1/player/player-1/league/league-1?x-lang=es'
   )
+  assert.equal(
+    getAllowedFantasyPath(
+      '/v1/competition/1/player/player-1/market-value',
+      'GET'
+    ),
+    '/v1/competition/1/player/player-1/market-value'
+  )
   assert.equal(getAllowedFantasyPath('//example.com/steal', 'GET'), null)
   assert.equal(
     getAllowedFantasyPath('/v1/competition/1/leagues?x-lang=en', 'GET'),
@@ -448,6 +455,10 @@ test('proxy allowlist rejects external URLs and legacy endpoints', () => {
     null
   )
   assert.equal(getAllowedFantasyPath('/v4/leagues', 'GET'), null)
+  assert.equal(
+    getAllowedFantasyPath('/v3/player/player-1/market-value', 'GET'),
+    null
+  )
   assert.equal(getAllowedFantasyPath('/v1/competition/1/leagues', 'POST'), null)
   assert.equal(
     getAllowedFantasyPath(
