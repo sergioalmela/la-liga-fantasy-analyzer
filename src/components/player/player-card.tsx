@@ -5,6 +5,7 @@ import {
   Clock,
   Euro,
   Minus,
+  Percent,
   Shield,
   Shirt,
   Target,
@@ -21,9 +22,11 @@ import {
   getFormattedSalePrice,
   getPlayerDisplayName,
   type Player,
+  type PlayerOffer,
 } from '@/entities/player'
 import { useLanguage } from '@/i18n/language-provider'
 import { getBuyoutClauseStatus, getSaleStatus } from '@/lib/player-utils'
+import type { StartingProbability } from '@/lib/starting-probability'
 import type { MarketTrend } from '@/services/market-trend-service'
 
 interface PlayerCardProps {
@@ -32,6 +35,13 @@ interface PlayerCardProps {
   marketTrend?: MarketTrend | null
   marketTrendLoading?: boolean
   showMarketTrend?: boolean
+  showStartingProbability?: boolean
+  startingProbability?: StartingProbability | null
+  startingProbabilityLoading?: boolean
+  showOfferDetails?: boolean
+  offers?: PlayerOffer[]
+  offersLoading?: boolean
+  purchasePrice?: number
 }
 
 export function PlayerCard({
@@ -40,6 +50,13 @@ export function PlayerCard({
   marketTrend,
   marketTrendLoading = false,
   showMarketTrend = false,
+  showStartingProbability = false,
+  startingProbability,
+  startingProbabilityLoading = false,
+  showOfferDetails = false,
+  offers,
+  offersLoading = false,
+  purchasePrice,
 }: PlayerCardProps) {
   const { locale, t } = useLanguage()
   const buyoutStatus = getBuyoutClauseStatus(player)
@@ -79,6 +96,46 @@ export function PlayerCard({
       maximumFractionDigits: 2,
       minimumFractionDigits: 0,
     }).format(percentage)
+  const formatOfferDifference = (amount: number): string => {
+    const difference = amount - player.marketValue
+    if (difference === 0) {
+      return t('player.offerEqual', {
+        price: formatMarketChange(player.marketValue),
+      })
+    }
+
+    const percentage =
+      player.marketValue > 0
+        ? (Math.abs(difference) / player.marketValue) * 100
+        : 0
+    return t(difference > 0 ? 'player.offerAbove' : 'player.offerBelow', {
+      price: formatMarketChange(player.marketValue),
+      amount: formatMarketChange(Math.abs(difference)),
+      percentage: formatTrendPercentage(percentage),
+    })
+  }
+  const formatPurchaseDifference = (amount: number): string => {
+    if (!purchasePrice) return ''
+
+    const difference = amount - purchasePrice
+    if (difference === 0) {
+      return t('player.offerPurchaseEqual', {
+        price: formatMarketChange(purchasePrice),
+      })
+    }
+
+    const percentage = (Math.abs(difference) / purchasePrice) * 100
+    return t(
+      difference > 0
+        ? 'player.offerPurchaseAbove'
+        : 'player.offerPurchaseBelow',
+      {
+        price: formatMarketChange(purchasePrice),
+        amount: formatMarketChange(Math.abs(difference)),
+        percentage: formatTrendPercentage(percentage),
+      }
+    )
+  }
 
   return (
     <Card className="hover:shadow-md transition-shadow">
@@ -96,6 +153,48 @@ export function PlayerCard({
           </span>
           <span className="font-medium text-slate-800">{player.team.name}</span>
         </div>
+
+        {showStartingProbability && (
+          <div className="flex items-start justify-between gap-3 border-t pt-3 text-sm">
+            <span className="flex items-center gap-1 text-gray-600">
+              <Percent className="h-4 w-4" />
+              {t('probability.label')}
+            </span>
+            {startingProbability ? (
+              <div className="flex flex-col items-end gap-1">
+                <span
+                  className={`rounded-full px-2.5 py-1 text-sm font-semibold ${
+                    startingProbability.probability >= 80
+                      ? 'bg-green-100 text-green-700'
+                      : startingProbability.probability >= 50
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {startingProbability.probability}%
+                </span>
+                <a
+                  href={startingProbability.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  {t('probability.source', {
+                    source: startingProbability.sourceName,
+                  })}
+                </a>
+              </div>
+            ) : (
+              <span className="text-right text-xs text-gray-500">
+                {t(
+                  startingProbabilityLoading
+                    ? 'probability.loading'
+                    : 'probability.unavailable'
+                )}
+              </span>
+            )}
+          </div>
+        )}
 
         {showMarketTrend && (
           <div className="flex items-start justify-between gap-3 border-t pt-3 text-sm">
@@ -245,10 +344,72 @@ export function PlayerCard({
               <div className={`text-xs ${saleStatus.color}`}>{saleMessage}</div>
             )}
             <div className="text-xs text-blue-600 mt-1">
-              {t('player.offers', {
-                count: player.saleInfo.numberOfOffers,
-              })}
+              {t(
+                player.saleInfo.numberOfOffers === 1
+                  ? 'player.offerCountOne'
+                  : 'player.offerCountOther',
+                { count: player.saleInfo.numberOfOffers }
+              )}
             </div>
+            {showOfferDetails && player.saleInfo.numberOfOffers > 0 && (
+              <div className="mt-3 space-y-2 border-t border-blue-200 pt-3">
+                {offersLoading ? (
+                  <p className="text-xs text-blue-600">
+                    {t('player.offerAmountsLoading')}
+                  </p>
+                ) : offers && offers.length > 0 ? (
+                  offers.map((offer, index) => {
+                    const difference = offer.amount - player.marketValue
+                    const purchaseDifference = purchasePrice
+                      ? offer.amount - purchasePrice
+                      : null
+                    return (
+                      <div
+                        key={offer.id}
+                        className="rounded border border-blue-200 bg-white px-3 py-2"
+                      >
+                        <div className="flex items-center justify-between gap-3 text-xs">
+                          <span className="font-medium text-blue-700">
+                            {t('player.offerNumber', { number: index + 1 })}
+                          </span>
+                          <span className="font-semibold text-slate-800">
+                            {getFormattedSalePrice(offer.amount)}
+                          </span>
+                        </div>
+                        <p
+                          className={`mt-1 text-right text-xs font-medium ${
+                            difference > 0
+                              ? 'text-green-600'
+                              : difference < 0
+                                ? 'text-red-600'
+                                : 'text-slate-600'
+                          }`}
+                        >
+                          {formatOfferDifference(offer.amount)}
+                        </p>
+                        {purchaseDifference !== null && (
+                          <p
+                            className={`mt-1 text-right text-xs font-medium ${
+                              purchaseDifference > 0
+                                ? 'text-green-600'
+                                : purchaseDifference < 0
+                                  ? 'text-red-600'
+                                  : 'text-slate-600'
+                            }`}
+                          >
+                            {formatPurchaseDifference(offer.amount)}
+                          </p>
+                        )}
+                      </div>
+                    )
+                  })
+                ) : (
+                  <p className="text-xs text-blue-600">
+                    {t('player.offerAmountsUnavailable')}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </CardContent>
