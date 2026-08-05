@@ -13,6 +13,8 @@ export const endpoints = {
     marketValue: (playerId: string) => `${CMP}/player/${playerId}/market-value`,
     details: (playerId: string, leagueId: string) =>
       `${CMP}/player/${playerId}/league/${leagueId}`,
+    offers: (playerTeamId: string, leagueId: string) =>
+      `${CMP}/league/${leagueId}/playerTeam/${playerTeamId}/offer`,
   },
   team: {
     master: '/v3/teams-master',
@@ -29,6 +31,8 @@ export const endpoints = {
       `${CMP}/leagues/${leagueId}/standing/${weekId}`,
     activity: (leagueId: string, page: number) =>
       `${CMP}/leagues/${leagueId}/activity/${page}`,
+    marketHistory: (leagueId: string) =>
+      `${CMP}/league/${leagueId}/market/history`,
     team: (teamId: string, leagueId: string) =>
       `${CMP}/leagues/${leagueId}/teams/${teamId}`,
     market: (leagueId: string) => `${CMP}/league/${leagueId}/market`,

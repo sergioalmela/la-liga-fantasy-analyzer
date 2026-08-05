@@ -1,4 +1,8 @@
-import { Player } from '@/entities/player'
+import type { Player } from '../entities/player.ts'
+
+const HOUR_IN_MS = 60 * 60 * 1000
+
+export type ClauseUnlockFilter = 'all' | 'unlocked' | '24h' | '48h'
 
 export function calculateSummaryStats(players: Player[]) {
   const totalValue = players.reduce(
@@ -32,21 +36,56 @@ export function getPlayersWithLowBuyout(players: Player[]): Player[] {
 }
 
 export function isProtectionExpiringSoon(player: Player): boolean {
-  if (!player.buyoutClauseLockedEndTime) return true
-
-  const protectionEndTime = new Date(player.buyoutClauseLockedEndTime).getTime()
-  const currentTime = Date.now()
-  const twoDaysInMs = 2 * 24 * 60 * 60 * 1000
-
-  return protectionEndTime - currentTime <= twoDaysInMs
+  const remainingHours = getClauseUnlockRemainingHours(player)
+  return remainingHours !== null && remainingHours <= 48
 }
 
-export function getPlayersWithExpiringProtection(players: Player[]): Player[] {
-  return players.filter((player) => {
-    if (!player.buyoutClauseLockedEndTime) return false
-    const protectionEnd = new Date(player.buyoutClauseLockedEndTime)
-    const hoursLeft = (protectionEnd.getTime() - Date.now()) / (1000 * 60 * 60)
+export function getClauseUnlockRemainingHours(
+  player: Player,
+  now = Date.now()
+): number | null {
+  if (!player.buyoutClause) return null
+  if (!player.buyoutClauseLockedEndTime) return 0
 
-    return hoursLeft <= 72
+  const unlockTime = new Date(player.buyoutClauseLockedEndTime).getTime()
+  if (!Number.isFinite(unlockTime)) return null
+
+  return (unlockTime - now) / HOUR_IN_MS
+}
+
+export function filterPlayersByClauseUnlock(
+  players: Player[],
+  filter: ClauseUnlockFilter,
+  now = Date.now()
+): Player[] {
+  if (filter === 'all') return players
+
+  const maximumHours = filter === 'unlocked' ? 0 : filter === '24h' ? 24 : 48
+  return players.filter((player) => {
+    const remainingHours = getClauseUnlockRemainingHours(player, now)
+    return remainingHours !== null && remainingHours <= maximumHours
+  })
+}
+
+export function getClauseUnlockUrgencyBonus(
+  player: Player,
+  now = Date.now()
+): number {
+  const remainingHours = getClauseUnlockRemainingHours(player, now)
+  if (remainingHours === null || remainingHours > 72) return 0
+  if (remainingHours <= 0) return 30
+  if (remainingHours <= 12) return 25
+  if (remainingHours <= 24) return 18
+  if (remainingHours <= 48) return 10
+  return 5
+}
+
+export function getPlayersWithExpiringProtection(
+  players: Player[],
+  now = Date.now()
+): Player[] {
+  return players.filter((player) => {
+    const remainingHours = getClauseUnlockRemainingHours(player, now)
+    return remainingHours !== null && remainingHours > 0 && remainingHours <= 72
   })
 }

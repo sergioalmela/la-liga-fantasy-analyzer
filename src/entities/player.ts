@@ -14,6 +14,11 @@ export const POSITION_METADATA = {
   5: { label: 'CH', emoji: '👔' },
 }
 
+export interface PlayerOffer {
+  id: string
+  amount: number
+}
+
 export interface Player {
   id: string
   playerTeamId?: string

@@ -1,4 +1,4 @@
-import type { Player } from '../entities/player'
+import type { Player, PlayerOffer } from '../entities/player'
 import type {
   ActivityPlayer,
   CurrentWeek,
@@ -360,6 +360,93 @@ export function parseTeamPlayers(value: unknown): ContractResult<Player[]> {
   }
 
   return { data: players, error: null }
+}
+
+export function parsePlayerOffers(
+  value: unknown
+): ContractResult<PlayerOffer[]> {
+  let entries = unwrapArray(value, ['offers', 'elements', 'data', 'items'])
+  if (!entries && isRecord(value) && isRecord(value.data)) {
+    entries = unwrapArray(value.data, ['offers', 'elements', 'items'])
+  }
+  if (!entries && isRecord(value)) entries = [value]
+  if (!entries) return { data: null, error: 'Invalid offers response' }
+
+  const offers: PlayerOffer[] = []
+  for (const entry of entries) {
+    if (!isRecord(entry)) {
+      return { data: null, error: 'Invalid offer entry' }
+    }
+
+    const nestedOffer = isRecord(entry.offer) ? entry.offer : null
+    const id =
+      asString(entry.id ?? nestedOffer?.id) ?? `offer-${offers.length + 1}`
+    const amount = asNumber(
+      entry.amount ??
+        entry.money ??
+        entry.offerMoney ??
+        entry.offerPrice ??
+        entry.value ??
+        nestedOffer?.amount ??
+        nestedOffer?.money ??
+        nestedOffer?.offerMoney ??
+        nestedOffer?.value ??
+        nestedOffer?.offerPrice
+    )
+    if (amount === null || !Number.isSafeInteger(amount) || amount <= 0) {
+      return { data: null, error: 'Invalid offer entry' }
+    }
+
+    offers.push({ id, amount })
+  }
+
+  offers.sort((left, right) => right.amount - left.amount)
+  return { data: offers, error: null }
+}
+
+export interface PlayerPurchaseHistory {
+  playerId: string
+  amount: number
+  occurredAt: string
+}
+
+export function parsePlayerPurchaseHistory(
+  value: unknown
+): ContractResult<PlayerPurchaseHistory[]> {
+  const entries = unwrapArray(value, ['elements', 'history', 'data'])
+  if (!entries) return { data: null, error: 'Invalid market history response' }
+
+  const history: PlayerPurchaseHistory[] = []
+  for (const entry of entries) {
+    if (!isRecord(entry)) {
+      return { data: null, error: 'Invalid market history entry' }
+    }
+
+    const historyPlayer = isRecord(entry.player) ? entry.player : null
+    const playerId = asString(
+      historyPlayer?.id ?? entry.playerMasterId ?? entry.playerId
+    )
+    const amount = asNumber(entry.money ?? entry.amount ?? entry.salePrice)
+    const occurredAt = asString(entry.date ?? entry.createdAt)
+    if (
+      !playerId ||
+      amount === null ||
+      !Number.isSafeInteger(amount) ||
+      amount <= 0 ||
+      !occurredAt ||
+      Number.isNaN(new Date(occurredAt).getTime())
+    ) {
+      return { data: null, error: 'Invalid market history entry' }
+    }
+
+    history.push({ playerId, amount, occurredAt })
+  }
+
+  history.sort(
+    (left, right) =>
+      new Date(right.occurredAt).getTime() - new Date(left.occurredAt).getTime()
+  )
+  return { data: history, error: null }
 }
 
 export function parseOfficialMarketPlayers(

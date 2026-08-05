@@ -22,6 +22,8 @@ import {
   parseMatchStats,
   parseOfficialMarketPlayers,
   parsePlayerDetail,
+  parsePlayerOffers,
+  parsePlayerPurchaseHistory,
   parseTeamMoney,
   parseTeamPlayers,
   parseTeamsMaster,
@@ -111,6 +113,71 @@ test('normalizes numeric strings in team players', () => {
   assert.equal(result.error, null)
   assert.equal(result.data?.[0].positionId, 1)
   assert.equal(result.data?.[0].marketValue, 34914257)
+})
+
+test('normalizes and sorts received player offers', () => {
+  assert.deepEqual(
+    parsePlayerOffers({
+      offers: [
+        { id: 'low', amount: '9500000' },
+        { id: 'high', money: 11_500_000 },
+      ],
+    }),
+    {
+      data: [
+        { id: 'high', amount: 11_500_000 },
+        { id: 'low', amount: 9_500_000 },
+      ],
+      error: null,
+    }
+  )
+  assert.deepEqual(
+    parsePlayerOffers({ data: { elements: [{ offer: { offerPrice: 42 } }] } }),
+    {
+      data: [{ id: 'offer-1', amount: 42 }],
+      error: null,
+    }
+  )
+})
+
+test('rejects received offers without a valid amount', () => {
+  assert.deepEqual(parsePlayerOffers({ offers: [{ id: 'missing' }] }), {
+    data: null,
+    error: 'Invalid offer entry',
+  })
+})
+
+test('normalizes market history for purchase-price comparisons', () => {
+  assert.deepEqual(
+    parsePlayerPurchaseHistory([
+      {
+        player: { id: 68 },
+        operation: 'buy',
+        money: '12000000',
+        date: '2026-07-21T10:00:00Z',
+      },
+      {
+        playerMasterId: 69,
+        amount: 9_000_000,
+        createdAt: '2026-07-20T10:00:00Z',
+      },
+    ]),
+    {
+      data: [
+        {
+          playerId: '68',
+          amount: 12_000_000,
+          occurredAt: '2026-07-21T10:00:00Z',
+        },
+        {
+          playerId: '69',
+          amount: 9_000_000,
+          occurredAt: '2026-07-20T10:00:00Z',
+        },
+      ],
+      error: null,
+    }
+  )
 })
 
 test('keeps only official league-market players', () => {
@@ -444,6 +511,20 @@ test('proxy allowlist rejects external URLs and legacy endpoints', () => {
       'GET'
     ),
     '/v1/competition/1/player/player-1/market-value'
+  )
+  assert.equal(
+    getAllowedFantasyPath(
+      '/v1/competition/1/league/league-1/playerTeam/player-team-1/offer',
+      'GET'
+    ),
+    '/v1/competition/1/league/league-1/playerTeam/player-team-1/offer'
+  )
+  assert.equal(
+    getAllowedFantasyPath(
+      '/v1/competition/1/league/league-1/market/history',
+      'GET'
+    ),
+    '/v1/competition/1/league/league-1/market/history'
   )
   assert.equal(getAllowedFantasyPath('//example.com/steal', 'GET'), null)
   assert.equal(

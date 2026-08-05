@@ -6,20 +6,27 @@ import { useEffect, useState } from 'react'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
+import { StartingProbabilityToggle } from '@/components/player/starting-probability-toggle'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
 import { useLanguage } from '@/i18n/language-provider'
+import type { StartingProbability } from '@/lib/starting-probability'
+import { useStartingProbabilityPreference } from '@/lib/starting-probability-preference'
 import { leagueService } from '@/services/league-service'
 import {
   getMarketTrends,
   type MarketTrend,
 } from '@/services/market-trend-service'
 import {
+  type ClauseUnlockFilter,
   calculateSummaryStats,
+  filterPlayersByClauseUnlock,
   getPlayersWithExpiringProtection,
   getPlayersWithLowBuyout,
 } from '@/services/player-analytics-service'
+import { getStartingProbabilities } from '@/services/starting-probability-service'
 import { teamService } from '@/services/team-service'
 import { sortOpportunities } from '@/utils/player-sorting-utils'
 
@@ -34,6 +41,15 @@ export default function PlayerOpportunitiesPage() {
   const [error, setError] = useState('')
   const [trends, setTrends] = useState<Map<string, MarketTrend>>(new Map())
   const [trendsLoading, setTrendsLoading] = useState(false)
+  const [probabilities, setProbabilities] = useState<
+    Map<string, StartingProbability>
+  >(new Map())
+  const [probabilitiesLoading, setProbabilitiesLoading] = useState(false)
+  const [clauseFilter, setClauseFilter] = useState<ClauseUnlockFilter>('all')
+  const {
+    enabled: showStartingProbability,
+    setEnabled: setShowStartingProbability,
+  } = useStartingProbabilityPreference()
 
   useEffect(() => {
     let cancelled = false
@@ -95,10 +111,46 @@ export default function PlayerOpportunitiesPage() {
     }
   }, [leagueId, t, teamId])
 
+  useEffect(() => {
+    let cancelled = false
+
+    if (!showStartingProbability || opponentPlayers.length === 0) {
+      setProbabilities(new Map())
+      setProbabilitiesLoading(false)
+      return
+    }
+
+    setProbabilitiesLoading(true)
+    getStartingProbabilities(opponentPlayers)
+      .then((startingProbabilities) => {
+        if (!cancelled) setProbabilities(startingProbabilities)
+      })
+      .finally(() => {
+        if (!cancelled) setProbabilitiesLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [opponentPlayers, showStartingProbability])
+
   const playersWithOpportunities = getPlayersWithLowBuyout(opponentPlayers)
   const playersWithExpiringProtection =
     getPlayersWithExpiringProtection(opponentPlayers)
   const summaryStats = calculateSummaryStats(opponentPlayers)
+  const filteredPlayers = filterPlayersByClauseUnlock(
+    opponentPlayers,
+    clauseFilter
+  )
+  const clauseFilters: Array<{
+    value: ClauseUnlockFilter
+    label: string
+  }> = [
+    { value: 'all', label: t('opportunities.filterAll') },
+    { value: 'unlocked', label: t('opportunities.filterUnlocked') },
+    { value: '24h', label: t('opportunities.filter24h') },
+    { value: '48h', label: t('opportunities.filter48h') },
+  ]
 
   return (
     <AuthGuard>
@@ -107,13 +159,19 @@ export default function PlayerOpportunitiesPage() {
 
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900">
-                {t('opportunities.title')}
-              </h1>
-              <p className="mt-2 text-gray-600">
-                {t('opportunities.subtitle')}
-              </p>
+            <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {t('opportunities.title')}
+                </h1>
+                <p className="mt-2 text-gray-600">
+                  {t('opportunities.subtitle')}
+                </p>
+              </div>
+              <StartingProbabilityToggle
+                enabled={showStartingProbability}
+                onChange={setShowStartingProbability}
+              />
             </div>
 
             {loading && (
@@ -203,17 +261,65 @@ export default function PlayerOpportunitiesPage() {
                   </div>
                 )}
 
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {sortOpportunities(opponentPlayers, trends).map((player) => (
-                    <PlayerCard
-                      key={player.id}
-                      player={player}
-                      detailsHref={`/leagues/${leagueId}/players/${player.id}`}
-                      showMarketTrend
-                      marketTrend={trends.get(player.id)}
-                      marketTrendLoading={trendsLoading}
-                    />
-                  ))}
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {t('opportunities.filterLabel')}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {t('opportunities.filterCount', {
+                          count: filteredPlayers.length,
+                          total: opponentPlayers.length,
+                        })}
+                      </p>
+                    </div>
+                    <fieldset className="flex flex-wrap gap-2">
+                      <legend className="sr-only">
+                        {t('opportunities.filterLabel')}
+                      </legend>
+                      {clauseFilters.map((filter) => (
+                        <Button
+                          key={filter.value}
+                          type="button"
+                          size="sm"
+                          variant={
+                            clauseFilter === filter.value
+                              ? 'primary'
+                              : 'outline'
+                          }
+                          aria-pressed={clauseFilter === filter.value}
+                          onClick={() => setClauseFilter(filter.value)}
+                        >
+                          {filter.label}
+                        </Button>
+                      ))}
+                    </fieldset>
+                  </div>
+
+                  {filteredPlayers.length > 0 ? (
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      {sortOpportunities(filteredPlayers, trends).map(
+                        (player) => (
+                          <PlayerCard
+                            key={player.id}
+                            player={player}
+                            detailsHref={`/leagues/${leagueId}/players/${player.id}`}
+                            showMarketTrend
+                            marketTrend={trends.get(player.id)}
+                            marketTrendLoading={trendsLoading}
+                            showStartingProbability={showStartingProbability}
+                            startingProbability={probabilities.get(player.id)}
+                            startingProbabilityLoading={probabilitiesLoading}
+                          />
+                        )
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-10 text-center text-sm text-gray-600">
+                      {t('opportunities.filterEmpty')}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

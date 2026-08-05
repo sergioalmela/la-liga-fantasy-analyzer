@@ -6,11 +6,14 @@ import { useEffect, useState } from 'react'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
+import { StartingProbabilityToggle } from '@/components/player/starting-probability-toggle'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
-import { Player } from '@/entities/player'
+import { Player, type PlayerOffer } from '@/entities/player'
 import { useLanguage } from '@/i18n/language-provider'
+import type { StartingProbability } from '@/lib/starting-probability'
+import { useStartingProbabilityPreference } from '@/lib/starting-probability-preference'
 import { refreshMarketListings } from '@/services/market-service'
 import {
   getMarketTrends,
@@ -21,6 +24,11 @@ import {
   getPlayersWithExpiringProtection,
   getPlayersWithLowBuyout,
 } from '@/services/player-analytics-service'
+import {
+  getPlayerOffers,
+  getPlayerPurchasePrices,
+} from '@/services/player-offer-service'
+import { getStartingProbabilities } from '@/services/starting-probability-service'
 import { teamService } from '@/services/team-service'
 import { formatCurrency } from '@/utils/format-utils'
 import { sortPlayers } from '@/utils/player-sorting-utils'
@@ -35,6 +43,19 @@ export default function TeamPlayersPage() {
   const [error, setError] = useState('')
   const [trends, setTrends] = useState<Map<string, MarketTrend>>(new Map())
   const [trendsLoading, setTrendsLoading] = useState(false)
+  const [probabilities, setProbabilities] = useState<
+    Map<string, StartingProbability>
+  >(new Map())
+  const [probabilitiesLoading, setProbabilitiesLoading] = useState(false)
+  const [offers, setOffers] = useState<Map<string, PlayerOffer[]>>(new Map())
+  const [offersLoading, setOffersLoading] = useState(false)
+  const [purchasePrices, setPurchasePrices] = useState<Map<string, number>>(
+    new Map()
+  )
+  const {
+    enabled: showStartingProbability,
+    setEnabled: setShowStartingProbability,
+  } = useStartingProbabilityPreference()
   const [refreshingMarket, setRefreshingMarket] = useState(false)
   const [marketStatus, setMarketStatus] = useState<{
     tone: 'progress' | 'success' | 'warning' | 'error'
@@ -75,6 +96,73 @@ export default function TeamPlayersPage() {
       cancelled = true
     }
   }, [leagueId, t, teamId])
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (!showStartingProbability || players.length === 0) {
+      setProbabilities(new Map())
+      setProbabilitiesLoading(false)
+      return
+    }
+
+    setProbabilitiesLoading(true)
+    getStartingProbabilities(players)
+      .then((startingProbabilities) => {
+        if (!cancelled) setProbabilities(startingProbabilities)
+      })
+      .finally(() => {
+        if (!cancelled) setProbabilitiesLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [players, showStartingProbability])
+
+  useEffect(() => {
+    let cancelled = false
+    const playersWithOffers = players.filter(
+      (player) => player.saleInfo && player.saleInfo.numberOfOffers > 0
+    )
+
+    if (playersWithOffers.length === 0) {
+      setOffers(new Map())
+      setOffersLoading(false)
+      return
+    }
+
+    setOffers(new Map())
+    setOffersLoading(true)
+    getPlayerOffers(leagueId, playersWithOffers)
+      .then((receivedOffers) => {
+        if (!cancelled) setOffers(receivedOffers)
+      })
+      .finally(() => {
+        if (!cancelled) setOffersLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [leagueId, players])
+
+  useEffect(() => {
+    let cancelled = false
+
+    if (players.length === 0) {
+      setPurchasePrices(new Map())
+      return
+    }
+
+    getPlayerPurchasePrices(leagueId, players).then((prices) => {
+      if (!cancelled) setPurchasePrices(prices)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [leagueId, players])
 
   const handleRefreshMarket = async () => {
     if (players.length === 0 || refreshingMarket) return
@@ -151,16 +239,24 @@ export default function TeamPlayersPage() {
                   </h1>
                   <p className="mt-2 text-gray-600">{t('players.subtitle')}</p>
                 </div>
-                <Button
-                  onClick={() => void handleRefreshMarket()}
-                  disabled={refreshingMarket || loading || players.length === 0}
-                  className="gap-2"
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${refreshingMarket ? 'animate-spin' : ''}`}
+                <div className="flex flex-wrap gap-2">
+                  <StartingProbabilityToggle
+                    enabled={showStartingProbability}
+                    onChange={setShowStartingProbability}
                   />
-                  {t('market.renew')}
-                </Button>
+                  <Button
+                    onClick={() => void handleRefreshMarket()}
+                    disabled={
+                      refreshingMarket || loading || players.length === 0
+                    }
+                    className="gap-2"
+                  >
+                    <RefreshCw
+                      className={`h-4 w-4 ${refreshingMarket ? 'animate-spin' : ''}`}
+                    />
+                    {t('market.renew')}
+                  </Button>
+                </div>
               </div>
 
               {marketStatus && (
@@ -316,6 +412,18 @@ export default function TeamPlayersPage() {
                     showMarketTrend
                     marketTrend={trends.get(player.id)}
                     marketTrendLoading={trendsLoading}
+                    showStartingProbability={showStartingProbability}
+                    startingProbability={probabilities.get(player.id)}
+                    startingProbabilityLoading={probabilitiesLoading}
+                    showOfferDetails
+                    offers={offers.get(player.id)}
+                    purchasePrice={purchasePrices.get(player.id)}
+                    offersLoading={
+                      offersLoading &&
+                      Boolean(
+                        player.saleInfo && player.saleInfo.numberOfOffers > 0
+                      )
+                    }
                   />
                 ))}
               </div>
