@@ -7,6 +7,7 @@ import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
 import { StartingProbabilityToggle } from '@/components/player/starting-probability-toggle'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
 import { Player } from '@/entities/player'
@@ -19,7 +20,9 @@ import {
   type MarketTrend,
 } from '@/services/market-trend-service'
 import {
+  type ClauseUnlockFilter,
   calculateSummaryStats,
+  filterPlayersByClauseUnlock,
   getPlayersWithExpiringProtection,
   getPlayersWithLowBuyout,
 } from '@/services/player-analytics-service'
@@ -42,6 +45,7 @@ export default function PlayerOpportunitiesPage() {
     Map<string, StartingProbability>
   >(new Map())
   const [probabilitiesLoading, setProbabilitiesLoading] = useState(false)
+  const [clauseFilter, setClauseFilter] = useState<ClauseUnlockFilter>('all')
   const {
     enabled: showStartingProbability,
     setEnabled: setShowStartingProbability,
@@ -134,6 +138,19 @@ export default function PlayerOpportunitiesPage() {
   const playersWithExpiringProtection =
     getPlayersWithExpiringProtection(opponentPlayers)
   const summaryStats = calculateSummaryStats(opponentPlayers)
+  const filteredPlayers = filterPlayersByClauseUnlock(
+    opponentPlayers,
+    clauseFilter
+  )
+  const clauseFilters: Array<{
+    value: ClauseUnlockFilter
+    label: string
+  }> = [
+    { value: 'all', label: t('opportunities.filterAll') },
+    { value: 'unlocked', label: t('opportunities.filterUnlocked') },
+    { value: '24h', label: t('opportunities.filter24h') },
+    { value: '48h', label: t('opportunities.filter48h') },
+  ]
 
   return (
     <AuthGuard>
@@ -244,20 +261,65 @@ export default function PlayerOpportunitiesPage() {
                   </div>
                 )}
 
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {sortOpportunities(opponentPlayers, trends).map((player) => (
-                    <PlayerCard
-                      key={player.id}
-                      player={player}
-                      detailsHref={`/leagues/${leagueId}/players/${player.id}`}
-                      showMarketTrend
-                      marketTrend={trends.get(player.id)}
-                      marketTrendLoading={trendsLoading}
-                      showStartingProbability={showStartingProbability}
-                      startingProbability={probabilities.get(player.id)}
-                      startingProbabilityLoading={probabilitiesLoading}
-                    />
-                  ))}
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {t('opportunities.filterLabel')}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {t('opportunities.filterCount', {
+                          count: filteredPlayers.length,
+                          total: opponentPlayers.length,
+                        })}
+                      </p>
+                    </div>
+                    <fieldset className="flex flex-wrap gap-2">
+                      <legend className="sr-only">
+                        {t('opportunities.filterLabel')}
+                      </legend>
+                      {clauseFilters.map((filter) => (
+                        <Button
+                          key={filter.value}
+                          type="button"
+                          size="sm"
+                          variant={
+                            clauseFilter === filter.value
+                              ? 'primary'
+                              : 'outline'
+                          }
+                          aria-pressed={clauseFilter === filter.value}
+                          onClick={() => setClauseFilter(filter.value)}
+                        >
+                          {filter.label}
+                        </Button>
+                      ))}
+                    </fieldset>
+                  </div>
+
+                  {filteredPlayers.length > 0 ? (
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      {sortOpportunities(filteredPlayers, trends).map(
+                        (player) => (
+                          <PlayerCard
+                            key={player.id}
+                            player={player}
+                            detailsHref={`/leagues/${leagueId}/players/${player.id}`}
+                            showMarketTrend
+                            marketTrend={trends.get(player.id)}
+                            marketTrendLoading={trendsLoading}
+                            showStartingProbability={showStartingProbability}
+                            startingProbability={probabilities.get(player.id)}
+                            startingProbabilityLoading={probabilitiesLoading}
+                          />
+                        )
+                      )}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-10 text-center text-sm text-gray-600">
+                      {t('opportunities.filterEmpty')}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
