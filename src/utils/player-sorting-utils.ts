@@ -20,22 +20,11 @@ export type SortOrder = 'asc' | 'desc'
 export function sortOpportunities(
   players: Player[],
   trends?: ReadonlyMap<string, MarketTrend>,
-  now = Date.now(),
-  preferredPositions: ReadonlySet<number> = new Set()
+  now = Date.now()
 ): Player[] {
   return [...players].sort((a, b) => {
-    const scoreA = calculateOpportunityScore(
-      a,
-      trends?.get(a.id),
-      now,
-      preferredPositions
-    )
-    const scoreB = calculateOpportunityScore(
-      b,
-      trends?.get(b.id),
-      now,
-      preferredPositions
-    )
+    const scoreA = calculateOpportunityScore(a, trends?.get(a.id), now)
+    const scoreB = calculateOpportunityScore(b, trends?.get(b.id), now)
 
     return scoreB - scoreA
   })
@@ -44,13 +33,9 @@ export function sortOpportunities(
 function calculateOpportunityScore(
   player: Player,
   trend: MarketTrend | undefined,
-  now: number,
-  preferredPositions: ReadonlySet<number>
+  now: number
 ): number {
   let score = 0
-
-  // Players that fill an actual squad gap are more useful than generic deals.
-  if (preferredPositions.has(player.positionId)) score += 25
 
   // 1. Low buyout opportunities get massive boost (40 points)
   if (player.buyoutClause && player.marketValue) {

@@ -31,8 +31,22 @@ import {
 import { useLanguage } from '@/i18n/language-provider'
 import { getBuyoutClauseStatus, getSaleStatus } from '@/lib/player-utils'
 import type { StartingProbability } from '@/lib/starting-probability'
-import type { MarketTrend } from '@/services/market-trend-service'
-import { projectMarketValue } from '@/services/squad-advisor-service'
+import {
+  getMarketTrendSignal,
+  type MarketTrend,
+  type MarketTrendSignal,
+} from '@/services/market-trend-service'
+
+const TREND_SIGNAL_STYLES: Record<MarketTrendSignal, string> = {
+  'rising-confirmed': 'bg-green-100 text-green-700',
+  'rising-slowing': 'bg-amber-100 text-amber-800',
+  'possible-bullish-turn': 'bg-amber-100 text-amber-800',
+  'possible-bearish-turn': 'bg-orange-100 text-orange-800',
+  'likely-bearish-turn': 'bg-red-100 text-red-700',
+  'falling-confirmed': 'bg-red-100 text-red-700',
+  'possible-rebound': 'bg-amber-100 text-amber-800',
+  mixed: 'bg-gray-100 text-gray-700',
+}
 
 interface PlayerCardProps {
   player: Player
@@ -44,6 +58,7 @@ interface PlayerCardProps {
   startingProbability?: StartingProbability | null
   startingProbabilityLoading?: boolean
   showOfferDetails?: boolean
+  showSaleInfo?: boolean
   offers?: PlayerOffer[]
   offersLoading?: boolean
   purchasePrice?: number
@@ -67,6 +82,7 @@ export function PlayerCard({
   startingProbability,
   startingProbabilityLoading = false,
   showOfferDetails = false,
+  showSaleInfo = true,
   offers,
   offersLoading = false,
   purchasePrice,
@@ -82,7 +98,7 @@ export function PlayerCard({
   const { locale, t } = useLanguage()
   const buyoutStatus = getBuyoutClauseStatus(player)
   const saleStatus = getSaleStatus(player)
-  const projection = projectMarketValue(player.marketValue, marketTrend)
+  const trendSignal = marketTrend ? getMarketTrendSignal(marketTrend) : null
   const buyoutMessage = (() => {
     if (!buyoutStatus) return ''
     if (buyoutStatus.status === 'unprotected') return t('player.noProtection')
@@ -272,14 +288,11 @@ export function PlayerCard({
                     </span>
                   </span>
                 ))}
-                {projection && (
-                  <span className="mt-1 text-xs text-gray-600">
-                    {t('trend.projection', {
-                      value: formatMarketChange(projection.value),
-                      change: `${projection.change >= 0 ? '+' : '-'}${formatMarketChange(
-                        Math.abs(projection.change)
-                      )}`,
-                    })}
+                {trendSignal && (
+                  <span
+                    className={`mt-1 rounded px-2 py-1 text-right text-xs font-semibold ${TREND_SIGNAL_STYLES[trendSignal]}`}
+                  >
+                    {t(`trend.signal.${trendSignal}`)}
                   </span>
                 )}
               </div>
@@ -394,7 +407,7 @@ export function PlayerCard({
           </div>
         )}
 
-        {player.saleInfo && (
+        {showSaleInfo && player.saleInfo && (
           <div className="border-t pt-3 bg-blue-50 -mx-6 -mb-6 px-6 pb-6 rounded-b-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-blue-700 font-medium flex items-center gap-1">

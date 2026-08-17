@@ -292,6 +292,28 @@ test('normalizes historical lineups and matchday points by position', () => {
   assert.equal(result.data?.players[0].team.name, 'Example FC')
 })
 
+test('normalizes array formations and infers a valid formation as fallback', () => {
+  const entry = (id: number) => ({
+    playerTeamId: id,
+    playerMaster: { ...playerMaster, id },
+  })
+  const formation = {
+    goalkeeper: [entry(1)],
+    defender: [entry(2), entry(3), entry(4), entry(5)],
+    midfield: [entry(6), entry(7), entry(8)],
+    striker: [entry(9), entry(10), entry(11)],
+  }
+
+  const arrayResult = parseLineup(
+    { formation: { ...formation, tactical_formation: [4, 3, 3] } },
+    2
+  )
+  assert.equal(arrayResult.data?.formationName, '4-3-3')
+
+  const inferredResult = parseLineup({ formation }, 2)
+  assert.equal(inferredResult.data?.formationName, '4-3-3')
+})
+
 test('enriches the competition calendar with master team names', () => {
   const teams = parseTeamsMaster([
     { id: 1, name: 'Home Club', shortName: 'HOME' },

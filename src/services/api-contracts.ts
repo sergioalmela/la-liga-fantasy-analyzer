@@ -516,6 +516,46 @@ const LINEUP_POSITIONS = {
   coach: { positionId: 5, lineupPosition: 'coach' },
 } as const
 
+const VALID_FORMATIONS = new Set([
+  '3-4-3',
+  '3-5-2',
+  '4-3-3',
+  '4-4-2',
+  '4-5-1',
+  '5-3-2',
+  '5-4-1',
+])
+
+function normalizeFormationName(value: unknown): string | null {
+  const direct = asString(value)
+  if (direct) {
+    const normalized = direct.trim().replace(/[,_\s]+/g, '-')
+    return VALID_FORMATIONS.has(normalized) ? normalized : null
+  }
+
+  if (Array.isArray(value) && value.length === 3) {
+    const normalized = value.map(asNumber)
+    if (normalized.every((entry) => entry !== null)) {
+      const name = normalized.join('-')
+      return VALID_FORMATIONS.has(name) ? name : null
+    }
+  }
+
+  if (isRecord(value)) {
+    for (const candidate of [
+      value.tacticalFormation,
+      value.tactical_formation,
+      value.formationName,
+      value.name,
+    ]) {
+      const normalized = normalizeFormationName(candidate)
+      if (normalized) return normalized
+    }
+  }
+
+  return null
+}
+
 function getWeekPoints(
   playerMaster: JsonRecord,
   weekNumber: number
@@ -575,10 +615,15 @@ export function parseLineup(
     }
   }
 
+  const inferredFormation = normalizeFormationName([
+    players.filter((player) => player.lineupPosition === 'defender').length,
+    players.filter((player) => player.lineupPosition === 'midfielder').length,
+    players.filter((player) => player.lineupPosition === 'forward').length,
+  ])
   const formationName =
-    asString(formation.tacticalFormation) ??
-    asString(value.tacticalFormation) ??
-    asString(value.formationName)
+    normalizeFormationName(formation) ??
+    normalizeFormationName(value) ??
+    inferredFormation
 
   return {
     data: {

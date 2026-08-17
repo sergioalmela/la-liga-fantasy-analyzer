@@ -5,6 +5,8 @@ import {
   Check,
   LayoutDashboard,
   Shield,
+  Shirt,
+  ShoppingCart,
   Star,
   Trophy,
   Users,
@@ -123,43 +125,55 @@ export default function LeaguesPage() {
                           )}
                         </div>
 
-                        <div className="pt-4 flex gap-2 flex-wrap">
-                          <Link
-                            href={`/leagues/${league.id}/${league.team.id}`}
-                          >
-                            <Button size="sm" variant="primary">
-                              <LayoutDashboard className="w-4 h-4 mr-1" />
-                              {t('leagues.matchday')}
-                            </Button>
-                          </Link>
-                          <Link
-                            href={`/leagues/${league.id}/${league.team.id}/activity`}
-                          >
-                            <Button size="sm" variant="outline">
-                              <Activity className="w-4 h-4 mr-1" />{' '}
-                              {t('leagues.radar')}
-                            </Button>
-                          </Link>
-                          <Link
-                            href={`/leagues/${league.id}/${league.team.id}/opportunities`}
-                          >
-                            <Button size="sm" variant="outline">
-                              <Star className="w-5 h-5" />{' '}
-                              {t('leagues.opportunities')}
-                            </Button>
-                          </Link>
-                          <Link
-                            href={`/leagues/${league.id}/${league.team.id}/players`}
-                          >
-                            <Button size="sm" variant="outline">
-                              {t('leagues.myPlayers')}
-                            </Button>
-                          </Link>
-                          <Link href={`/leagues/${league.id}/market`}>
-                            <Button size="sm" variant="outline">
-                              {t('leagues.market')}
-                            </Button>
-                          </Link>
+                        <div className="space-y-2 pt-4">
+                          <div className="flex flex-wrap gap-2">
+                            <Link
+                              href={`/leagues/${league.id}/${league.team.id}/opportunities`}
+                            >
+                              <Button
+                                size="sm"
+                                className="gap-1.5 bg-amber-500 hover:bg-amber-600"
+                              >
+                                <Star className="h-4 w-4" />
+                                {t('leagues.opportunities')}
+                              </Button>
+                            </Link>
+                            <Link
+                              href={`/leagues/${league.id}/${league.team.id}/players`}
+                            >
+                              <Button size="sm" className="gap-1.5">
+                                <Shirt className="h-4 w-4" />
+                                {t('leagues.myPlayers')}
+                              </Button>
+                            </Link>
+                            <Link href={`/leagues/${league.id}/market`}>
+                              <Button
+                                size="sm"
+                                className="gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+                              >
+                                <ShoppingCart className="h-4 w-4" />
+                                {t('leagues.market')}
+                              </Button>
+                            </Link>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Link
+                              href={`/leagues/${league.id}/${league.team.id}`}
+                            >
+                              <Button size="sm" variant="outline">
+                                <LayoutDashboard className="mr-1 h-4 w-4" />
+                                {t('leagues.matchday')}
+                              </Button>
+                            </Link>
+                            <Link
+                              href={`/leagues/${league.id}/${league.team.id}/activity`}
+                            >
+                              <Button size="sm" variant="outline">
+                                <Activity className="mr-1 h-4 w-4" />
+                                {t('leagues.radar')}
+                              </Button>
+                            </Link>
+                          </div>
                         </div>
                       </div>
                     </CardContent>

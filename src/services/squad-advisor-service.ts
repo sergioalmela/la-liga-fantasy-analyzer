@@ -1,6 +1,9 @@
 import type { Player } from '../entities/player.ts'
 import type { StartingProbability } from '../lib/starting-probability.ts'
-import type { MarketTrend } from './market-trend-service.ts'
+import {
+  isMarketTrendBearish,
+  type MarketTrend,
+} from './market-trend-service.ts'
 
 export const FORMATIONS = {
   '3-4-3': { 1: 1, 2: 3, 3: 4, 4: 3 },
@@ -32,12 +35,6 @@ export interface SellCandidate {
   reasons: Array<
     'outside-lineup' | 'falling' | 'low-probability' | 'unavailable'
   >
-}
-
-export interface MarketProjection {
-  value: number
-  change: number
-  confidence: 'low' | 'medium'
 }
 
 export interface LineupPayload {
@@ -165,7 +162,8 @@ export function getSellCandidates(
   return players.flatMap((player) => {
     if (lineupIds.has(player.id)) return []
     const reasons: SellCandidate['reasons'] = ['outside-lineup']
-    if (trends.get(player.id)?.direction === 'down') reasons.push('falling')
+    const trend = trends.get(player.id)
+    if (trend && isMarketTrendBearish(trend)) reasons.push('falling')
     if ((probabilities.get(player.id)?.probability ?? 100) < 50) {
       reasons.push('low-probability')
     }
@@ -182,31 +180,4 @@ export function getSellCandidates(
     )
     return hasPositionSurplus && hasStrongWarning ? [{ player, reasons }] : []
   })
-}
-
-export function projectMarketValue(
-  currentValue: number,
-  trend?: MarketTrend | null
-): MarketProjection | null {
-  if (!trend || currentValue <= 0) return null
-
-  const stablePeriods = trend.periods.filter((period) => period.days >= 3)
-  const periods = stablePeriods.length > 0 ? stablePeriods : trend.periods
-  if (periods.length === 0) return null
-
-  const averageDailyChange =
-    periods.reduce((sum, period) => sum + period.change / period.days, 0) /
-    periods.length
-  const damping = stablePeriods.length > 0 ? 0.5 : 0.25
-  const rawChange = averageDailyChange * 7 * damping
-  const maximumChange = currentValue * 0.2
-  const change = Math.round(
-    Math.max(-maximumChange, Math.min(maximumChange, rawChange))
-  )
-
-  return {
-    value: Math.max(0, currentValue + change),
-    change,
-    confidence: stablePeriods.length >= 2 ? 'medium' : 'low',
-  }
 }

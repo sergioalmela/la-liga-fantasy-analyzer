@@ -27,6 +27,16 @@ export interface MarketTrend {
   periods: MarketTrendPeriod[]
 }
 
+export type MarketTrendSignal =
+  | 'rising-confirmed'
+  | 'rising-slowing'
+  | 'possible-bullish-turn'
+  | 'possible-bearish-turn'
+  | 'likely-bearish-turn'
+  | 'falling-confirmed'
+  | 'possible-rebound'
+  | 'mixed'
+
 interface CachedTrend {
   expiresAt: number
   promise: Promise<MarketTrend | null>
@@ -115,6 +125,43 @@ export function calculateMarketTrend(history: unknown): MarketTrend | null {
     momentumScore,
     periods,
   }
+}
+
+export function getMarketTrendSignal(trend: MarketTrend): MarketTrendSignal {
+  const periods = new Map(
+    trend.periods.map((period) => [period.days, period] as const)
+  )
+  const oneDay = periods.get(1)
+  const threeDays = periods.get(3)
+  const sevenDays = periods.get(7)
+  if (!oneDay || !threeDays || !sevenDays) return 'mixed'
+
+  const signature = [
+    oneDay.direction,
+    threeDays.direction,
+    sevenDays.direction,
+  ].join(':')
+
+  if (signature === 'up:up:up') {
+    return oneDay.change < (threeDays.change / 3) * 0.5
+      ? 'rising-slowing'
+      : 'rising-confirmed'
+  }
+  if (signature === 'up:up:down') return 'possible-bullish-turn'
+  if (signature === 'down:up:up') return 'possible-bearish-turn'
+  if (signature === 'down:down:up') return 'likely-bearish-turn'
+  if (signature === 'down:down:down') return 'falling-confirmed'
+  if (signature === 'up:down:down') return 'possible-rebound'
+  return 'mixed'
+}
+
+export function isMarketTrendBearish(trend: MarketTrend): boolean {
+  const signal = getMarketTrendSignal(trend)
+  return (
+    signal === 'possible-bearish-turn' ||
+    signal === 'likely-bearish-turn' ||
+    signal === 'falling-confirmed'
+  )
 }
 
 async function fetchPlayerMarketTrend(

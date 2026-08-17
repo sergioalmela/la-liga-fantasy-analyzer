@@ -18,6 +18,7 @@ import { useStartingProbabilityPreference } from '@/lib/starting-probability-pre
 import { refreshMarketListings } from '@/services/market-service'
 import {
   getMarketTrends,
+  isMarketTrendBearish,
   type MarketTrend,
 } from '@/services/market-trend-service'
 import {
@@ -272,7 +273,7 @@ export default function TeamPlayersPage() {
         player: player.nickname || player.name,
         price: formatCurrency(player.buyoutClause),
       }),
-      String(Math.ceil(player.buyoutClause / 1_000_000) + 1)
+      String((player.buyoutClause + 1_000_000) / 1_000_000)
     )
     if (entered === null) return
 
@@ -308,9 +309,10 @@ export default function TeamPlayersPage() {
   const playersWithLowBuyout = getPlayersWithLowBuyout(players)
   const playersWithExpiringProtection =
     getPlayersWithExpiringProtection(players)
-  const fallingPlayers = players.filter(
-    (player) => trends.get(player.id)?.direction === 'down'
-  )
+  const fallingPlayers = players.filter((player) => {
+    const trend = trends.get(player.id)
+    return trend ? isMarketTrendBearish(trend) : false
+  })
 
   return (
     <AuthGuard>

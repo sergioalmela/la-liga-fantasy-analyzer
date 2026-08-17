@@ -6,7 +6,6 @@ import {
   buildLineupPayload,
   getSellCandidates,
   getSquadNeeds,
-  projectMarketValue,
   recommendLineup,
 } from '../src/services/squad-advisor-service.ts'
 
@@ -74,7 +73,9 @@ test('only suggests selling surplus non-lineup players with a warning signal', (
     direction: 'down',
     momentumScore: -2,
     periods: [
+      { days: 1, direction: 'down', change: -100_000, changePercent: -1 },
       { days: 3, direction: 'down', change: -300_000, changePercent: -3 },
+      { days: 7, direction: 'down', change: -700_000, changePercent: -7 },
     ],
   }
   const trends = new Map([[players[5].id, falling]])
@@ -85,20 +86,4 @@ test('only suggests selling surplus non-lineup players with a warning signal', (
     ),
     ['def-5']
   )
-})
-
-test('projects seven days conservatively and caps extreme changes', () => {
-  const trend: MarketTrend = {
-    direction: 'up',
-    momentumScore: 10,
-    periods: [
-      { days: 3, direction: 'up', change: 3_000_000, changePercent: 30 },
-      { days: 7, direction: 'up', change: 7_000_000, changePercent: 70 },
-    ],
-  }
-  assert.deepEqual(projectMarketValue(10_000_000, trend), {
-    value: 12_000_000,
-    change: 2_000_000,
-    confidence: 'medium',
-  })
 })

@@ -86,6 +86,8 @@ export const messages = {
     'opportunities.filterUnlocked': 'Desbloqueadas',
     'opportunities.filter24h': 'En 24 h o menos',
     'opportunities.filter48h': 'En 48 h o menos',
+    'opportunities.positionFilter': 'Filtrar por posición',
+    'opportunities.positionAll': 'Todas',
     'opportunities.filterCount': 'Mostrando {count} de {total} jugadores',
     'opportunities.filterEmpty':
       'No hay jugadores con cláusulas en esta ventana de tiempo.',
@@ -153,11 +155,11 @@ export const messages = {
     'player.increaseClause': 'Subir cláusula',
     'player.increasingClause': 'Actualizando…',
     'player.increaseClausePrompt':
-      'Nueva cláusula para {player}, expresada en millones de euros. Cláusula actual: {price}.',
+      'Nueva cláusula TOTAL para {player}, expresada en millones de euros. Cláusula actual: {price}. Por cada 2 M€ de aumento se descuenta aproximadamente 1 M€ de tu saldo.',
     'player.invalidClause':
       'Introduce una cantidad válida y superior a la cláusula actual.',
     'player.increaseClauseConfirm':
-      'La cláusula de {player} subirá a {price}. Coste estimado para tu saldo: {cost}. ¿Continuar?',
+      'La cláusula de {player} subirá a {price}. Se descontarán aproximadamente {cost} de tu saldo. ¿Continuar?',
     'player.increaseClauseSuccess': 'Cláusula actualizada correctamente.',
     'player.increaseClauseError': 'No se pudo actualizar la cláusula.',
     'player.noProtection': 'Sin protección',
@@ -171,7 +173,14 @@ export const messages = {
     'trend.unavailable': 'Histórico no disponible',
     'trend.momentum': 'Impulso',
     'trend.period': '{days} d',
-    'trend.projection': 'Estimación 7 d: {value} ({change})',
+    'trend.signal.rising-confirmed': 'Subida confirmada',
+    'trend.signal.rising-slowing': 'Sube, pero pierde fuerza',
+    'trend.signal.possible-bullish-turn': 'Posible giro alcista',
+    'trend.signal.possible-bearish-turn': 'Posible giro bajista',
+    'trend.signal.likely-bearish-turn': 'Probable giro bajista',
+    'trend.signal.falling-confirmed': 'Bajada confirmada',
+    'trend.signal.possible-rebound': 'Posible suelo o rebote',
+    'trend.signal.mixed': 'Señal todavía mixta',
     'trend.up': 'Sube',
     'trend.down': 'Baja',
     'trend.stable': 'Estable',
@@ -187,6 +196,8 @@ export const messages = {
     'advisor.formation': 'Formación',
     'advisor.apply': 'Aplicar once',
     'advisor.applying': 'Aplicando…',
+    'advisor.applyUnavailable':
+      'No se puede aplicar todavía: necesitas 11 jugadores y cubrir todas las posiciones de la formación elegida.',
     'advisor.applyConfirm':
       'Esto sustituirá tu alineación actual por el once recomendado en formación {formation}. ¿Continuar?',
     'advisor.applySuccess': 'Alineación actualizada correctamente.',
@@ -375,6 +386,8 @@ export const messages = {
     'opportunities.filterUnlocked': 'Unlocked',
     'opportunities.filter24h': 'Within 24 hours',
     'opportunities.filter48h': 'Within 48 hours',
+    'opportunities.positionFilter': 'Filter by position',
+    'opportunities.positionAll': 'All',
     'opportunities.filterCount': 'Showing {count} of {total} players',
     'opportunities.filterEmpty':
       'No players have clauses in this unlock window.',
@@ -441,11 +454,11 @@ export const messages = {
     'player.increaseClause': 'Raise clause',
     'player.increasingClause': 'Updating…',
     'player.increaseClausePrompt':
-      'New clause for {player}, in millions of euros. Current clause: {price}.',
+      'New TOTAL clause for {player}, in millions of euros. Current clause: {price}. Roughly €1M is deducted from your balance for each €2M increase.',
     'player.invalidClause':
       'Enter a valid amount higher than the current clause.',
     'player.increaseClauseConfirm':
-      "{player}'s clause will rise to {price}. Estimated balance cost: {cost}. Continue?",
+      "{player}'s clause will rise to {price}. Approximately {cost} will be deducted from your balance. Continue?",
     'player.increaseClauseSuccess': 'Clause updated successfully.',
     'player.increaseClauseError': 'The clause could not be updated.',
     'player.noProtection': 'No protection',
@@ -459,7 +472,14 @@ export const messages = {
     'trend.unavailable': 'History unavailable',
     'trend.momentum': 'Momentum',
     'trend.period': '{days}d',
-    'trend.projection': '7-day estimate: {value} ({change})',
+    'trend.signal.rising-confirmed': 'Confirmed rise',
+    'trend.signal.rising-slowing': 'Rising, but losing strength',
+    'trend.signal.possible-bullish-turn': 'Possible bullish turn',
+    'trend.signal.possible-bearish-turn': 'Possible bearish turn',
+    'trend.signal.likely-bearish-turn': 'Likely bearish turn',
+    'trend.signal.falling-confirmed': 'Confirmed fall',
+    'trend.signal.possible-rebound': 'Possible floor or rebound',
+    'trend.signal.mixed': 'Signal still mixed',
     'trend.up': 'Rising',
     'trend.down': 'Falling',
     'trend.stable': 'Stable',
@@ -475,6 +495,8 @@ export const messages = {
     'advisor.formation': 'Formation',
     'advisor.apply': 'Apply lineup',
     'advisor.applying': 'Applying…',
+    'advisor.applyUnavailable':
+      'It cannot be applied yet: you need 11 players and every position in the selected formation must be covered.',
     'advisor.applyConfirm':
       'This will replace your current lineup with the recommended {formation} formation. Continue?',
     'advisor.applySuccess': 'Lineup updated successfully.',

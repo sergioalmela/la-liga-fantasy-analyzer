@@ -100,11 +100,17 @@ export function SquadAdvisorPanel({
             type="button"
             size="sm"
             disabled={!lineupPayload || applying}
+            title={!lineupPayload ? t('advisor.applyUnavailable') : undefined}
             onClick={() => void handleApply()}
           >
             {applying ? t('advisor.applying') : t('advisor.apply')}
           </Button>
         </div>
+        {!lineupPayload && (
+          <p className="mt-3 text-xs text-amber-700">
+            {t('advisor.applyUnavailable')}
+          </p>
+        )}
         {applyStatus && (
           <p className="mt-3 text-sm text-indigo-700">{applyStatus}</p>
         )}
