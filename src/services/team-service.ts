@@ -2,9 +2,11 @@ import { Player } from '@/entities/player'
 import { apiClient, endpoints } from '@/services/api-client'
 import {
   parseOfficialMarketPlayers,
+  parseTeamMoney,
   parseTeamPlayers,
   parseTeamsMaster,
 } from '@/services/api-contracts'
+import type { TeamMoney } from '@/types/api'
 import { ApiResponse } from '@/types/api'
 
 export class TeamService {
@@ -20,7 +22,36 @@ export class TeamService {
     }
 
     const parsed = parseTeamPlayers(result.data)
-    return { ...parsed, status: result.status }
+    return {
+      ...parsed,
+      status: result.status,
+      ...(result.clockOffsetMs !== undefined
+        ? { clockOffsetMs: result.clockOffsetMs }
+        : {}),
+    }
+  }
+
+  async getMoney(teamId: string): Promise<ApiResponse<TeamMoney>> {
+    const result = await apiClient.get<unknown>(endpoints.team.money(teamId))
+    if (result.error) {
+      return {
+        data: null,
+        error: result.error,
+        status: result.status,
+        ...(result.clockOffsetMs !== undefined
+          ? { clockOffsetMs: result.clockOffsetMs }
+          : {}),
+      }
+    }
+
+    const parsed = parseTeamMoney(result.data)
+    return {
+      ...parsed,
+      status: result.status,
+      ...(result.clockOffsetMs !== undefined
+        ? { clockOffsetMs: result.clockOffsetMs }
+        : {}),
+    }
   }
 
   async getOfficialMarketPlayers(

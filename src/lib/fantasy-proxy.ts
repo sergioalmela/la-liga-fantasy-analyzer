@@ -32,12 +32,22 @@ const READ_PATHS = [
 ]
 
 const WRITE_PATHS: Partial<Record<string, RegExp[]>> = {
-  POST: [new RegExp(`^${COMPETITION_PATH}/league/${SEGMENT}/market/sell$`)],
+  POST: [
+    new RegExp(`^${COMPETITION_PATH}/league/${SEGMENT}/market/sell$`),
+    new RegExp(`^${COMPETITION_PATH}/league/${SEGMENT}/buyout/${SEGMENT}/pay$`),
+    new RegExp(
+      `^${COMPETITION_PATH}/league/${SEGMENT}/buyout/${SEGMENT}/increase$`
+    ),
+    new RegExp(
+      `^${COMPETITION_PATH}/league/${SEGMENT}/market/${SEGMENT}/offer/${SEGMENT}/(?:accept|reject)$`
+    ),
+  ],
   DELETE: [
     new RegExp(
       `^${COMPETITION_PATH}/league/${SEGMENT}/market/${SEGMENT}/delete$`
     ),
   ],
+  PUT: [new RegExp(`^${COMPETITION_PATH}/teams/${SEGMENT}/lineup$`)],
 }
 
 const ALLOWED_QUERY_PARAMETERS = new Set(['weekNumber', 'x-lang'])
@@ -93,7 +103,8 @@ export interface ValidatedRequestBody {
 
 export function validateFantasyRequestBody(
   method: string,
-  rawBody: string
+  rawBody: string,
+  path?: string
 ): ValidatedRequestBody {
   const normalizedMethod = method.toUpperCase()
 
@@ -101,7 +112,87 @@ export function validateFantasyRequestBody(
     return rawBody.trim() ? { valid: false } : { valid: true }
   }
 
+  if (normalizedMethod === 'PUT' && path?.includes('/teams/')) {
+    try {
+      const value = JSON.parse(rawBody) as unknown
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return { valid: false }
+      }
+      const record = value as Record<string, unknown>
+      const keys = Object.keys(record).sort().join(',')
+      if (keys !== 'defender,goalkeeper,midfield,striker,tactical_formation') {
+        return { valid: false }
+      }
+
+      const goalkeeper = record.goalkeeper
+      const defender = record.defender
+      const midfield = record.midfield
+      const striker = record.striker
+      const tacticalFormation = record.tactical_formation
+      if (
+        typeof goalkeeper !== 'string' ||
+        !new RegExp(`^${SEGMENT}$`).test(goalkeeper) ||
+        !Array.isArray(defender) ||
+        !Array.isArray(midfield) ||
+        !Array.isArray(striker) ||
+        !Array.isArray(tacticalFormation) ||
+        tacticalFormation.length !== 3 ||
+        !tacticalFormation.every(Number.isSafeInteger)
+      ) {
+        return { valid: false }
+      }
+
+      const [defenders, midfielders, strikers] = tacticalFormation as number[]
+      const validFormation = [
+        [3, 4, 3],
+        [3, 5, 2],
+        [4, 3, 3],
+        [4, 4, 2],
+        [4, 5, 1],
+        [5, 3, 2],
+        [5, 4, 1],
+      ].some(
+        ([d, m, s]) => d === defenders && m === midfielders && s === strikers
+      )
+      const positionIds = [defender, midfield, striker]
+      if (
+        !validFormation ||
+        defender.length !== defenders ||
+        midfield.length !== midfielders ||
+        striker.length !== strikers ||
+        !positionIds
+          .flat()
+          .every(
+            (id) =>
+              typeof id === 'string' && new RegExp(`^${SEGMENT}$`).test(id)
+          )
+      ) {
+        return { valid: false }
+      }
+
+      const allPlayerIds = [goalkeeper, ...defender, ...midfield, ...striker]
+      if (new Set(allPlayerIds).size !== 11) return { valid: false }
+
+      return {
+        valid: true,
+        body: JSON.stringify({
+          goalkeeper,
+          defender,
+          midfield,
+          striker,
+          tactical_formation: tacticalFormation,
+        }),
+      }
+    } catch {
+      return { valid: false }
+    }
+  }
+
   if (normalizedMethod !== 'POST') return { valid: false }
+
+  if (path?.includes('/offer/') && path.endsWith('/reject?x-lang=es')) {
+    return rawBody.trim() ? { valid: false } : { valid: true }
+  }
 
   try {
     const value = JSON.parse(rawBody) as unknown
@@ -111,6 +202,50 @@ export function validateFantasyRequestBody(
 
     const record = value as Record<string, unknown>
     const keys = Object.keys(record).sort()
+
+    if (path?.includes('/buyout/') && path.endsWith('/pay?x-lang=es')) {
+      if (keys.join(',') !== 'buyoutClauseToPay') return { valid: false }
+      const buyoutClauseToPay = record.buyoutClauseToPay
+      if (
+        typeof buyoutClauseToPay !== 'number' ||
+        !Number.isSafeInteger(buyoutClauseToPay) ||
+        buyoutClauseToPay <= 0
+      ) {
+        return { valid: false }
+      }
+
+      return {
+        valid: true,
+        body: JSON.stringify({ buyoutClauseToPay }),
+      }
+    }
+
+    if (path?.includes('/buyout/') && path.endsWith('/increase?x-lang=es')) {
+      if (keys.join(',') !== 'buyoutClause') return { valid: false }
+      const buyoutClause = record.buyoutClause
+      if (
+        typeof buyoutClause !== 'number' ||
+        !Number.isSafeInteger(buyoutClause) ||
+        buyoutClause <= 0
+      ) {
+        return { valid: false }
+      }
+      return { valid: true, body: JSON.stringify({ buyoutClause }) }
+    }
+
+    if (path?.includes('/offer/') && path.endsWith('/accept?x-lang=es')) {
+      if (keys.join(',') !== 'offerMoney') return { valid: false }
+      const offerMoney = record.offerMoney
+      if (
+        typeof offerMoney !== 'number' ||
+        !Number.isSafeInteger(offerMoney) ||
+        offerMoney <= 0
+      ) {
+        return { valid: false }
+      }
+      return { valid: true, body: JSON.stringify({ offerMoney }) }
+    }
+
     if (keys.join(',') !== 'playerId,salePrice') return { valid: false }
 
     const playerId = record.playerId
@@ -142,6 +277,8 @@ export async function preserveUpstreamResponse(
   const contentType = upstream.headers.get('content-type')
 
   if (contentType) headers.set('Content-Type', contentType)
+  const upstreamDate = upstream.headers.get('date')
+  if (upstreamDate) headers.set('X-Fantasy-Upstream-Date', upstreamDate)
 
   return new Response(body || null, {
     status: upstream.status,

@@ -16,6 +16,8 @@ cláusulas y el mercado de LALIGA Fantasy durante la temporada 2026/27.
   preferencia persistente en el navegador.
 - Tendencia reciente de valor en Mercado y Oportunidades mediante instantáneas
   diarias locales de los valores actuales de la API.
+- Estimación conservadora del valor a siete días, once recomendado por
+  formación, carencias de plantilla y señales razonadas para revisar ventas.
 - Radar read-only de actividad, presupuesto, inversión y balance reciente por
   mánager.
 - Validación runtime de las respuestas remotas antes de entregarlas a React.
@@ -24,7 +26,14 @@ cláusulas y el mercado de LALIGA Fantasy durante la temporada 2026/27.
   navegación.
 - Publicación masiva de la plantilla al valor de mercado, renovando anuncios
   existentes con confirmación previa y resultado por jugador.
-- Pujas, ofertas, cláusulas y otras mutaciones permanecen desactivadas.
+- Aplicación del once recomendado con confirmación y validación estricta del
+  payload antes de enviarlo.
+- Aceptación y rechazo de ofertas, y aumento manual de cláusulas, mostrando el
+  importe y solicitando confirmación antes de cada operación.
+- Vigilancia de cláusulas guardada únicamente en el navegador, con cuenta
+  atrás, comprobación de propietario, importe y saldo, y un intento automático
+  opcional mientras la pestaña permanezca abierta.
+- Las pujas y las mutaciones no descritas permanecen desactivadas.
 - El endpoint histórico anterior permanece desactivado porque devuelve datos
   congelados de la temporada 2025/26; la tendencia local empieza a calcularse
   después de disponer de instantáneas de al menos dos días distintos.
@@ -85,8 +94,17 @@ guarda en una cookie `HttpOnly`, `SameSite=Strict` y `Secure` en producción.
 Los datos Fantasy atraviesan el proxy Next, pero no se almacenan en una base de
 datos del proyecto. El histórico de valor procede del endpoint oficial de la
 temporada actual y se conserva únicamente en memoria durante seis horas para
-evitar peticiones repetidas. El navegador persiste solo el idioma elegido;
-nunca guarda credenciales ni tokens accesibles desde JavaScript.
+evitar peticiones repetidas. El navegador persiste la preferencia de idioma,
+pero nunca guarda credenciales ni tokens accesibles desde JavaScript. Si el
+usuario vigila una cláusula, también se guardan localmente el identificador del
+jugador, el propietario esperado, el importe y el momento de desbloqueo; estos
+datos se pueden borrar desde el propio panel.
+
+La vigilancia no es un servicio en segundo plano: requiere mantener la pestaña
+abierta y el dispositivo despierto. En el último minuto actualiza las
+condiciones y, durante los últimos diez segundos, comprueba una vez por segundo.
+El intento automático se cancela si cambian el propietario, la cláusula, la
+fecha de desbloqueo o el saldo disponible, y se desarma al recargar la página.
 
 Consulta [docs/authentication.md](docs/authentication.md) antes de desplegar la
 aplicación públicamente.

@@ -73,3 +73,35 @@ export async function getPlayerPurchasePrices(
 
   return purchasePrices
 }
+
+export async function acceptPlayerOffer(
+  leagueId: string,
+  marketId: string,
+  offer: PlayerOffer
+) {
+  return apiClient.post<unknown>(
+    endpoints.market.acceptOffer(leagueId, marketId, offer.id),
+    { offerMoney: offer.amount }
+  )
+}
+
+export async function rejectPlayerOffer(
+  leagueId: string,
+  marketId: string,
+  offerId: string
+) {
+  return apiClient.post<unknown>(
+    endpoints.market.rejectOffer(leagueId, marketId, offerId)
+  )
+}
+
+export async function increasePlayerBuyout(
+  leagueId: string,
+  playerId: string,
+  buyoutClause: number
+) {
+  return apiClient.post<unknown>(
+    endpoints.market.increaseBuyout(leagueId, playerId),
+    { buyoutClause }
+  )
+}

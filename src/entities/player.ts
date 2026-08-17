@@ -45,6 +45,7 @@ export interface Player {
     id: string
     name: string
     teamName: string
+    teamId?: string
   }
 }
 

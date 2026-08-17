@@ -1,10 +1,11 @@
 'use client'
 
-import { Users } from 'lucide-react'
+import { ShoppingCart, Users } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
+import { ClauseWatchPanel } from '@/components/player/clause-watch-panel'
 import { PlayerCard } from '@/components/player/player-card'
 import { StartingProbabilityToggle } from '@/components/player/starting-probability-toggle'
 import { Button } from '@/components/ui/button'
@@ -14,6 +15,7 @@ import { Player } from '@/entities/player'
 import { useLanguage } from '@/i18n/language-provider'
 import type { StartingProbability } from '@/lib/starting-probability'
 import { useStartingProbabilityPreference } from '@/lib/starting-probability-preference'
+import { useClauseWatch } from '@/lib/use-clause-watch'
 import { leagueService } from '@/services/league-service'
 import {
   getMarketTrends,
@@ -26,6 +28,7 @@ import {
   getPlayersWithExpiringProtection,
   getPlayersWithLowBuyout,
 } from '@/services/player-analytics-service'
+import { getSquadNeeds } from '@/services/squad-advisor-service'
 import { getStartingProbabilities } from '@/services/starting-probability-service'
 import { teamService } from '@/services/team-service'
 import { sortOpportunities } from '@/utils/player-sorting-utils'
@@ -37,6 +40,7 @@ export default function PlayerOpportunitiesPage() {
   const teamId = params.teamId as string
 
   const [opponentPlayers, setOpponentPlayers] = useState<Player[]>([])
+  const [ownPlayers, setOwnPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [trends, setTrends] = useState<Map<string, MarketTrend>>(new Map())
@@ -50,13 +54,28 @@ export default function PlayerOpportunitiesPage() {
     enabled: showStartingProbability,
     setEnabled: setShowStartingProbability,
   } = useStartingProbabilityPreference()
+  const handleClausePurchased = useCallback((target: { playerId: string }) => {
+    setOpponentPlayers((current) =>
+      current.filter((player) => player.id !== target.playerId)
+    )
+  }, [])
+  const clauseWatch = useClauseWatch({
+    leagueId,
+    teamId,
+    onPurchased: handleClausePurchased,
+  })
 
   useEffect(() => {
     let cancelled = false
 
     const loadPlayers = async () => {
       try {
-        const usersResult = await leagueService.getUsers(leagueId)
+        const [usersResult, ownPlayersResult] = await Promise.all([
+          leagueService.getUsers(leagueId),
+          teamService.getPlayers(leagueId, teamId),
+        ])
+
+        if (ownPlayersResult.data) setOwnPlayers(ownPlayersResult.data)
 
         if (usersResult.error) {
           setError(t('opportunities.loadError'))
@@ -83,6 +102,7 @@ export default function PlayerOpportunitiesPage() {
                     id: owner.team.manager.id,
                     name: owner.team.manager.managerName,
                     teamName: owner.team.manager.managerName,
+                    teamId: owner.team.id,
                   },
                 }))
               })
@@ -142,6 +162,16 @@ export default function PlayerOpportunitiesPage() {
     opponentPlayers,
     clauseFilter
   )
+  const squadNeeds = getSquadNeeds(ownPlayers)
+  const neededPositions = new Set(
+    squadNeeds.map((need) => need.positionId as number)
+  )
+  const positionLabels = {
+    1: t('advisor.goalkeepers'),
+    2: t('advisor.defenders'),
+    3: t('advisor.midfielders'),
+    4: t('advisor.forwards'),
+  }
   const clauseFilters: Array<{
     value: ClauseUnlockFilter
     label: string
@@ -196,6 +226,26 @@ export default function PlayerOpportunitiesPage() {
 
             {!loading && !error && opponentPlayers.length > 0 && (
               <div className="space-y-8">
+                <ClauseWatchPanel controller={clauseWatch} />
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <h2 className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+                    <ShoppingCart className="h-4 w-4" />
+                    {t('advisor.needs')}
+                  </h2>
+                  <p className="mt-1 text-sm text-amber-800">
+                    {squadNeeds.length > 0
+                      ? squadNeeds
+                          .map(
+                            (need) =>
+                              `${positionLabels[need.positionId]}: ${need.missing}`
+                          )
+                          .join(' · ')
+                      : t('advisor.noNeeds')}
+                  </p>
+                  <p className="mt-1 text-xs text-amber-700">
+                    {t('advisor.needsPriority')}
+                  </p>
+                </div>
                 {/* Summary Stats */}
                 <div className="grid gap-4 md:grid-cols-4 mb-8">
                   <Card>
@@ -299,21 +349,41 @@ export default function PlayerOpportunitiesPage() {
 
                   {filteredPlayers.length > 0 ? (
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                      {sortOpportunities(filteredPlayers, trends).map(
-                        (player) => (
-                          <PlayerCard
-                            key={player.id}
-                            player={player}
-                            detailsHref={`/leagues/${leagueId}/players/${player.id}`}
-                            showMarketTrend
-                            marketTrend={trends.get(player.id)}
-                            marketTrendLoading={trendsLoading}
-                            showStartingProbability={showStartingProbability}
-                            startingProbability={probabilities.get(player.id)}
-                            startingProbabilityLoading={probabilitiesLoading}
-                          />
-                        )
-                      )}
+                      {sortOpportunities(
+                        filteredPlayers,
+                        trends,
+                        Date.now(),
+                        neededPositions
+                      ).map((player) => (
+                        <PlayerCard
+                          key={player.id}
+                          player={player}
+                          detailsHref={`/leagues/${leagueId}/players/${player.id}`}
+                          showMarketTrend
+                          marketTrend={trends.get(player.id)}
+                          marketTrendLoading={trendsLoading}
+                          showStartingProbability={showStartingProbability}
+                          startingProbability={probabilities.get(player.id)}
+                          startingProbabilityLoading={probabilitiesLoading}
+                          clauseWatchEnabled={
+                            Boolean(player.buyoutClause) &&
+                            Boolean(player.owner?.teamId)
+                          }
+                          clauseWatched={clauseWatch.watches.some(
+                            (target) => target.playerId === player.id
+                          )}
+                          onToggleClauseWatch={() => {
+                            const watched = clauseWatch.watches.some(
+                              (target) => target.playerId === player.id
+                            )
+                            if (watched) {
+                              clauseWatch.removeWatch(player.id)
+                            } else {
+                              clauseWatch.addWatch(player)
+                            }
+                          }}
+                        />
+                      ))}
                     </div>
                   ) : (
                     <div className="rounded-lg border border-dashed border-gray-300 bg-white px-6 py-10 text-center text-sm text-gray-600">

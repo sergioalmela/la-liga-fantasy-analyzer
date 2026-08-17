@@ -42,6 +42,14 @@ export const endpoints = {
       `${CMP}/league/${leagueId}/market/sell?x-lang=es`,
     withdrawPlayer: (leagueId: string, marketId: string) =>
       `${CMP}/league/${leagueId}/market/${marketId}/delete?x-lang=es`,
+    payBuyout: (leagueId: string, playerId: string) =>
+      `${CMP}/league/${leagueId}/buyout/${playerId}/pay?x-lang=es`,
+    increaseBuyout: (leagueId: string, playerId: string) =>
+      `${CMP}/league/${leagueId}/buyout/${playerId}/increase?x-lang=es`,
+    acceptOffer: (leagueId: string, marketId: string, offerId: string) =>
+      `${CMP}/league/${leagueId}/market/${marketId}/offer/${offerId}/accept?x-lang=es`,
+    rejectOffer: (leagueId: string, marketId: string, offerId: string) =>
+      `${CMP}/league/${leagueId}/market/${marketId}/offer/${offerId}/reject?x-lang=es`,
   },
   stats: {
     weekMatches: (weekId: string) => `/stats${CMP}/stats/week/${weekId}`,
@@ -71,6 +79,7 @@ export class ApiClient {
     } = {}
   ): Promise<ApiResponse<T>> {
     try {
+      const startedAt = Date.now()
       const headers = new Headers()
       if (options.body !== undefined)
         headers.set('Content-Type', 'application/json')
@@ -86,6 +95,14 @@ export class ApiClient {
             : {}),
         }
       )
+      const finishedAt = Date.now()
+      const upstreamDate = response.headers.get('x-fantasy-upstream-date')
+      const parsedUpstreamDate = upstreamDate
+        ? Date.parse(upstreamDate)
+        : Number.NaN
+      const clockOffsetMs = Number.isFinite(parsedUpstreamDate)
+        ? parsedUpstreamDate - (startedAt + finishedAt) / 2
+        : undefined
 
       const text = await response.text()
       let data: unknown = null
@@ -97,6 +114,7 @@ export class ApiClient {
             data: null,
             error: `Fantasy API returned an invalid response (HTTP ${response.status})`,
             status: response.status,
+            ...(clockOffsetMs !== undefined ? { clockOffsetMs } : {}),
           }
         }
       }
@@ -106,10 +124,16 @@ export class ApiClient {
           data: null,
           error: getErrorMessage(data, response.status),
           status: response.status,
+          ...(clockOffsetMs !== undefined ? { clockOffsetMs } : {}),
         }
       }
 
-      return { data: data as T, error: null, status: response.status }
+      return {
+        data: data as T,
+        error: null,
+        status: response.status,
+        ...(clockOffsetMs !== undefined ? { clockOffsetMs } : {}),
+      }
     } catch (error) {
       return {
         data: null,

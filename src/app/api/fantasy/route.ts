@@ -64,7 +64,7 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
     const validatedBody =
       method === 'GET'
         ? { valid: true as const }
-        : validateFantasyRequestBody(method, rawBody)
+        : validateFantasyRequestBody(method, rawBody, path)
     if (!validatedBody.valid) {
       return Response.json({ error: 'Invalid request body' }, { status: 400 })
     }
