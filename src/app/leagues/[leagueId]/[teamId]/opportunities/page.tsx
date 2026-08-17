@@ -2,18 +2,20 @@
 
 import { Users } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
+import { ClauseWatchPanel } from '@/components/player/clause-watch-panel'
 import { PlayerCard } from '@/components/player/player-card'
 import { StartingProbabilityToggle } from '@/components/player/starting-probability-toggle'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
-import { Player } from '@/entities/player'
+import type { Player } from '@/entities/player'
 import { useLanguage } from '@/i18n/language-provider'
 import type { StartingProbability } from '@/lib/starting-probability'
 import { useStartingProbabilityPreference } from '@/lib/starting-probability-preference'
+import { useClauseWatch } from '@/lib/use-clause-watch'
 import { leagueService } from '@/services/league-service'
 import {
   getMarketTrends,
@@ -29,6 +31,8 @@ import {
 import { getStartingProbabilities } from '@/services/starting-probability-service'
 import { teamService } from '@/services/team-service'
 import { sortOpportunities } from '@/utils/player-sorting-utils'
+
+type PositionFilter = 'all' | 1 | 2 | 3 | 4
 
 export default function PlayerOpportunitiesPage() {
   const { t } = useLanguage()
@@ -46,10 +50,21 @@ export default function PlayerOpportunitiesPage() {
   >(new Map())
   const [probabilitiesLoading, setProbabilitiesLoading] = useState(false)
   const [clauseFilter, setClauseFilter] = useState<ClauseUnlockFilter>('all')
+  const [positionFilter, setPositionFilter] = useState<PositionFilter>('all')
   const {
     enabled: showStartingProbability,
     setEnabled: setShowStartingProbability,
   } = useStartingProbabilityPreference()
+  const handleClausePurchased = useCallback((target: { playerId: string }) => {
+    setOpponentPlayers((current) =>
+      current.filter((player) => player.id !== target.playerId)
+    )
+  }, [])
+  const clauseWatch = useClauseWatch({
+    leagueId,
+    teamId,
+    onPurchased: handleClausePurchased,
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -83,6 +98,7 @@ export default function PlayerOpportunitiesPage() {
                     id: owner.team.manager.id,
                     name: owner.team.manager.managerName,
                     teamName: owner.team.manager.managerName,
+                    teamId: owner.team.id,
                   },
                 }))
               })
@@ -138,10 +154,16 @@ export default function PlayerOpportunitiesPage() {
   const playersWithExpiringProtection =
     getPlayersWithExpiringProtection(opponentPlayers)
   const summaryStats = calculateSummaryStats(opponentPlayers)
-  const filteredPlayers = filterPlayersByClauseUnlock(
+  const clauseFilteredPlayers = filterPlayersByClauseUnlock(
     opponentPlayers,
     clauseFilter
   )
+  const filteredPlayers =
+    positionFilter === 'all'
+      ? clauseFilteredPlayers
+      : clauseFilteredPlayers.filter(
+          (player) => player.positionId === positionFilter
+        )
   const clauseFilters: Array<{
     value: ClauseUnlockFilter
     label: string
@@ -150,6 +172,16 @@ export default function PlayerOpportunitiesPage() {
     { value: 'unlocked', label: t('opportunities.filterUnlocked') },
     { value: '24h', label: t('opportunities.filter24h') },
     { value: '48h', label: t('opportunities.filter48h') },
+  ]
+  const positionFilters: Array<{
+    value: PositionFilter
+    label: string
+  }> = [
+    { value: 'all', label: t('opportunities.positionAll') },
+    { value: 1, label: t('advisor.goalkeepers') },
+    { value: 2, label: t('advisor.defenders') },
+    { value: 3, label: t('advisor.midfielders') },
+    { value: 4, label: t('advisor.forwards') },
   ]
 
   return (
@@ -196,6 +228,7 @@ export default function PlayerOpportunitiesPage() {
 
             {!loading && !error && opponentPlayers.length > 0 && (
               <div className="space-y-8">
+                <ClauseWatchPanel controller={clauseWatch} />
                 {/* Summary Stats */}
                 <div className="grid gap-4 md:grid-cols-4 mb-8">
                   <Card>
@@ -240,33 +273,9 @@ export default function PlayerOpportunitiesPage() {
                   </Card>
                 </div>
 
-                {/* Opportunity Alerts */}
-                {(playersWithOpportunities.length > 0 ||
-                  playersWithExpiringProtection.length > 0) && (
-                  <div className="mb-8 space-y-4">
-                    {playersWithOpportunities.length > 0 && (
-                      <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-                        <h3 className="text-sm font-medium text-orange-900 mb-2">
-                          {t('opportunities.alert', {
-                            count: playersWithOpportunities.length,
-                          })}
-                        </h3>
-                        <div className="text-sm text-orange-700">
-                          {playersWithOpportunities
-                            .map((p) => p.nickname || p.name)
-                            .join(', ')}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 <div className="space-y-4">
-                  <div className="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {t('opportunities.filterLabel')}
-                      </p>
                       <p className="text-xs text-gray-500">
                         {t('opportunities.filterCount', {
                           count: filteredPlayers.length,
@@ -274,27 +283,54 @@ export default function PlayerOpportunitiesPage() {
                         })}
                       </p>
                     </div>
-                    <fieldset className="flex flex-wrap gap-2">
-                      <legend className="sr-only">
-                        {t('opportunities.filterLabel')}
-                      </legend>
-                      {clauseFilters.map((filter) => (
-                        <Button
-                          key={filter.value}
-                          type="button"
-                          size="sm"
-                          variant={
-                            clauseFilter === filter.value
-                              ? 'primary'
-                              : 'outline'
-                          }
-                          aria-pressed={clauseFilter === filter.value}
-                          onClick={() => setClauseFilter(filter.value)}
-                        >
-                          {filter.label}
-                        </Button>
-                      ))}
-                    </fieldset>
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      <fieldset>
+                        <legend className="mb-2 text-sm font-medium text-gray-900">
+                          {t('opportunities.filterLabel')}
+                        </legend>
+                        <div className="flex flex-wrap gap-2">
+                          {clauseFilters.map((filter) => (
+                            <Button
+                              key={filter.value}
+                              type="button"
+                              size="sm"
+                              variant={
+                                clauseFilter === filter.value
+                                  ? 'primary'
+                                  : 'outline'
+                              }
+                              aria-pressed={clauseFilter === filter.value}
+                              onClick={() => setClauseFilter(filter.value)}
+                            >
+                              {filter.label}
+                            </Button>
+                          ))}
+                        </div>
+                      </fieldset>
+                      <fieldset>
+                        <legend className="mb-2 text-sm font-medium text-gray-900">
+                          {t('opportunities.positionFilter')}
+                        </legend>
+                        <div className="flex flex-wrap gap-2">
+                          {positionFilters.map((filter) => (
+                            <Button
+                              key={filter.value}
+                              type="button"
+                              size="sm"
+                              variant={
+                                positionFilter === filter.value
+                                  ? 'primary'
+                                  : 'outline'
+                              }
+                              aria-pressed={positionFilter === filter.value}
+                              onClick={() => setPositionFilter(filter.value)}
+                            >
+                              {filter.label}
+                            </Button>
+                          ))}
+                        </div>
+                      </fieldset>
+                    </div>
                   </div>
 
                   {filteredPlayers.length > 0 ? (
@@ -308,9 +344,27 @@ export default function PlayerOpportunitiesPage() {
                             showMarketTrend
                             marketTrend={trends.get(player.id)}
                             marketTrendLoading={trendsLoading}
+                            showSaleInfo={false}
                             showStartingProbability={showStartingProbability}
                             startingProbability={probabilities.get(player.id)}
                             startingProbabilityLoading={probabilitiesLoading}
+                            clauseWatchEnabled={
+                              Boolean(player.buyoutClause) &&
+                              Boolean(player.owner?.teamId)
+                            }
+                            clauseWatched={clauseWatch.watches.some(
+                              (target) => target.playerId === player.id
+                            )}
+                            onToggleClauseWatch={() => {
+                              const watched = clauseWatch.watches.some(
+                                (target) => target.playerId === player.id
+                              )
+                              if (watched) {
+                                clauseWatch.removeWatch(player.id)
+                              } else {
+                                clauseWatch.addWatch(player)
+                              }
+                            }}
                           />
                         )
                       )}

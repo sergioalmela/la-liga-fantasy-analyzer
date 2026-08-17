@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
   calculateMarketTrend,
+  getMarketTrendSignal,
   parseMarketValueHistory,
 } from '../src/services/market-trend-service.ts'
 
@@ -86,4 +87,31 @@ test('requires at least one previous daily value', () => {
     ]),
     null
   )
+})
+
+test('reads direction changes across the 1, 3 and 7 day windows', () => {
+  const signal = (changes: [number, number, number]) =>
+    getMarketTrendSignal({
+      direction: 'stable',
+      momentumScore: 0,
+      periods: ([1, 3, 7] as const).map((days, index) => ({
+        days,
+        change: changes[index],
+        changePercent: changes[index],
+        direction:
+          changes[index] > 0
+            ? ('up' as const)
+            : changes[index] < 0
+              ? ('down' as const)
+              : ('stable' as const),
+      })),
+    })
+
+  assert.equal(signal([-1, 1, 1]), 'possible-bearish-turn')
+  assert.equal(signal([1, 1, -1]), 'possible-bullish-turn')
+  assert.equal(signal([-1, -1, 1]), 'likely-bearish-turn')
+  assert.equal(signal([1, -1, -1]), 'possible-rebound')
+  assert.equal(signal([-1, -1, -1]), 'falling-confirmed')
+  assert.equal(signal([8, 141, 153]), 'rising-slowing')
+  assert.equal(signal([100, 150, 200]), 'rising-confirmed')
 })

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
+import { SquadAdvisorPanel } from '@/components/player/squad-advisor-panel'
 import { StartingProbabilityToggle } from '@/components/player/starting-probability-toggle'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -17,6 +18,7 @@ import { useStartingProbabilityPreference } from '@/lib/starting-probability-pre
 import { refreshMarketListings } from '@/services/market-service'
 import {
   getMarketTrends,
+  isMarketTrendBearish,
   type MarketTrend,
 } from '@/services/market-trend-service'
 import {
@@ -25,8 +27,11 @@ import {
   getPlayersWithLowBuyout,
 } from '@/services/player-analytics-service'
 import {
+  acceptPlayerOffer,
   getPlayerOffers,
   getPlayerPurchasePrices,
+  increasePlayerBuyout,
+  rejectPlayerOffer,
 } from '@/services/player-offer-service'
 import { getStartingProbabilities } from '@/services/starting-probability-service'
 import { teamService } from '@/services/team-service'
@@ -52,6 +57,8 @@ export default function TeamPlayersPage() {
   const [purchasePrices, setPurchasePrices] = useState<Map<string, number>>(
     new Map()
   )
+  const [offerActionId, setOfferActionId] = useState<string | null>(null)
+  const [clauseActionId, setClauseActionId] = useState<string | null>(null)
   const {
     enabled: showStartingProbability,
     setEnabled: setShowStartingProbability,
@@ -216,13 +223,96 @@ export default function TeamPlayersPage() {
     setRefreshingMarket(false)
   }
 
+  const reloadPlayers = async () => {
+    const result = await teamService.getPlayers(leagueId, teamId)
+    if (result.data) setPlayers(result.data)
+  }
+
+  const handleOfferAction = async (
+    player: Player,
+    offer: PlayerOffer,
+    action: 'accept' | 'reject'
+  ) => {
+    if (!player.saleInfo || offerActionId) return
+    const confirmed = window.confirm(
+      t(
+        action === 'accept'
+          ? 'player.acceptOfferConfirm'
+          : 'player.rejectOfferConfirm',
+        {
+          player: player.nickname || player.name,
+          price: formatCurrency(offer.amount),
+        }
+      )
+    )
+    if (!confirmed) return
+
+    setOfferActionId(offer.id)
+    const result =
+      action === 'accept'
+        ? await acceptPlayerOffer(leagueId, player.saleInfo.marketId, offer)
+        : await rejectPlayerOffer(leagueId, player.saleInfo.marketId, offer.id)
+    setMarketStatus({
+      tone: result.error ? 'error' : 'success',
+      message: result.error
+        ? t('player.offerActionError')
+        : t(
+            action === 'accept'
+              ? 'player.offerAccepted'
+              : 'player.offerRejected'
+          ),
+    })
+    if (!result.error) await reloadPlayers()
+    setOfferActionId(null)
+  }
+
+  const handleIncreaseClause = async (player: Player) => {
+    if (!player.buyoutClause || clauseActionId) return
+    const entered = window.prompt(
+      t('player.increaseClausePrompt', {
+        player: player.nickname || player.name,
+        price: formatCurrency(player.buyoutClause),
+      }),
+      String((player.buyoutClause + 1_000_000) / 1_000_000)
+    )
+    if (entered === null) return
+
+    const millions = Number(entered.replace(',', '.'))
+    const nextClause = Math.round(millions * 1_000_000)
+    if (!Number.isFinite(nextClause) || nextClause <= player.buyoutClause) {
+      setMarketStatus({ tone: 'error', message: t('player.invalidClause') })
+      return
+    }
+
+    const confirmed = window.confirm(
+      t('player.increaseClauseConfirm', {
+        player: player.nickname || player.name,
+        price: formatCurrency(nextClause),
+        cost: formatCurrency((nextClause - player.buyoutClause) / 2),
+      })
+    )
+    if (!confirmed) return
+
+    setClauseActionId(player.id)
+    const result = await increasePlayerBuyout(leagueId, player.id, nextClause)
+    setMarketStatus({
+      tone: result.error ? 'error' : 'success',
+      message: result.error
+        ? t('player.increaseClauseError')
+        : t('player.increaseClauseSuccess'),
+    })
+    if (!result.error) await reloadPlayers()
+    setClauseActionId(null)
+  }
+
   const summaryStats = calculateSummaryStats(players)
   const playersWithLowBuyout = getPlayersWithLowBuyout(players)
   const playersWithExpiringProtection =
     getPlayersWithExpiringProtection(players)
-  const fallingPlayers = players.filter(
-    (player) => trends.get(player.id)?.direction === 'down'
-  )
+  const fallingPlayers = players.filter((player) => {
+    const trend = trends.get(player.id)
+    return trend ? isMarketTrendBearish(trend) : false
+  })
 
   return (
     <AuthGuard>
@@ -327,6 +417,15 @@ export default function TeamPlayersPage() {
               </div>
             )}
 
+            {!loading && !error && players.length > 0 && (
+              <SquadAdvisorPanel
+                players={players}
+                probabilities={probabilities}
+                trends={trends}
+                teamId={teamId}
+              />
+            )}
+
             {/* Alerts */}
             {!loading &&
               !error &&
@@ -424,6 +523,15 @@ export default function TeamPlayersPage() {
                         player.saleInfo && player.saleInfo.numberOfOffers > 0
                       )
                     }
+                    offerActionId={offerActionId}
+                    onAcceptOffer={(offer) =>
+                      void handleOfferAction(player, offer, 'accept')
+                    }
+                    onRejectOffer={(offer) =>
+                      void handleOfferAction(player, offer, 'reject')
+                    }
+                    clauseActionPending={clauseActionId === player.id}
+                    onIncreaseClause={() => void handleIncreaseClause(player)}
                   />
                 ))}
               </div>

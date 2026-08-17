@@ -292,6 +292,28 @@ test('normalizes historical lineups and matchday points by position', () => {
   assert.equal(result.data?.players[0].team.name, 'Example FC')
 })
 
+test('normalizes array formations and infers a valid formation as fallback', () => {
+  const entry = (id: number) => ({
+    playerTeamId: id,
+    playerMaster: { ...playerMaster, id },
+  })
+  const formation = {
+    goalkeeper: [entry(1)],
+    defender: [entry(2), entry(3), entry(4), entry(5)],
+    midfield: [entry(6), entry(7), entry(8)],
+    striker: [entry(9), entry(10), entry(11)],
+  }
+
+  const arrayResult = parseLineup(
+    { formation: { ...formation, tactical_formation: [4, 3, 3] } },
+    2
+  )
+  assert.equal(arrayResult.data?.formationName, '4-3-3')
+
+  const inferredResult = parseLineup({ formation }, 2)
+  assert.equal(inferredResult.data?.formationName, '4-3-3')
+})
+
 test('enriches the competition calendar with master team names', () => {
   const teams = parseTeamsMaster([
     { id: 1, name: 'Home Club', shortName: 'HOME' },
@@ -561,6 +583,88 @@ test('proxy allowlist rejects external URLs and legacy endpoints', () => {
       'POST'
     ),
     null
+  )
+})
+
+test('proxy allows only the expected buyout endpoint and exact clause body', () => {
+  const path = '/v1/competition/1/league/league-1/buyout/player-1/pay?x-lang=es'
+  assert.equal(getAllowedFantasyPath(path, 'POST'), path)
+  assert.equal(
+    getAllowedFantasyPath(
+      '/v1/competition/1/league/league-1/buyout/player-1/delete?x-lang=es',
+      'POST'
+    ),
+    null
+  )
+  assert.deepEqual(
+    validateFantasyRequestBody(
+      'POST',
+      JSON.stringify({ buyoutClauseToPay: 20_000_000 }),
+      path
+    ),
+    { valid: true, body: JSON.stringify({ buyoutClauseToPay: 20_000_000 }) }
+  )
+  assert.deepEqual(
+    validateFantasyRequestBody(
+      'POST',
+      JSON.stringify({ buyoutClauseToPay: 20_000_000, extra: true }),
+      path
+    ),
+    { valid: false }
+  )
+})
+
+test('proxy validates complete position-safe lineup updates', () => {
+  const path = '/v1/competition/1/teams/team-1/lineup?x-lang=es'
+  const payload = {
+    goalkeeper: 'gk',
+    defender: ['d1', 'd2', 'd3', 'd4'],
+    midfield: ['m1', 'm2', 'm3'],
+    striker: ['s1', 's2', 's3'],
+    tactical_formation: [4, 3, 3],
+  }
+  assert.equal(getAllowedFantasyPath(path, 'PUT'), path)
+  assert.deepEqual(
+    validateFantasyRequestBody('PUT', JSON.stringify(payload), path),
+    { valid: true, body: JSON.stringify(payload) }
+  )
+  assert.deepEqual(
+    validateFantasyRequestBody(
+      'PUT',
+      JSON.stringify({ ...payload, defender: ['d1'] }),
+      path
+    ),
+    { valid: false }
+  )
+})
+
+test('proxy validates offer decisions and clause increases independently', () => {
+  const acceptPath =
+    '/v1/competition/1/league/league-1/market/market-1/offer/offer-1/accept?x-lang=es'
+  const rejectPath =
+    '/v1/competition/1/league/league-1/market/market-1/offer/offer-1/reject?x-lang=es'
+  const increasePath =
+    '/v1/competition/1/league/league-1/buyout/player-1/increase?x-lang=es'
+
+  assert.equal(getAllowedFantasyPath(acceptPath, 'POST'), acceptPath)
+  assert.deepEqual(
+    validateFantasyRequestBody(
+      'POST',
+      JSON.stringify({ offerMoney: 12_000_000 }),
+      acceptPath
+    ),
+    { valid: true, body: JSON.stringify({ offerMoney: 12_000_000 }) }
+  )
+  assert.deepEqual(validateFantasyRequestBody('POST', '', rejectPath), {
+    valid: true,
+  })
+  assert.deepEqual(
+    validateFantasyRequestBody(
+      'POST',
+      JSON.stringify({ buyoutClause: 25_000_000 }),
+      increasePath
+    ),
+    { valid: true, body: JSON.stringify({ buyoutClause: 25_000_000 }) }
   )
 })
 
