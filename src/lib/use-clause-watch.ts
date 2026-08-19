@@ -149,6 +149,13 @@ export function useClauseWatch({
           lastSafePreflightRef.current.set(target.playerId, Date.now())
         } else {
           lastSafePreflightRef.current.delete(target.playerId)
+          setWatches((current) =>
+            current.map((entry) =>
+              entry.playerId === target.playerId
+                ? { ...entry, automatic: false }
+                : entry
+            )
+          )
         }
         return result
       } finally {
@@ -171,6 +178,13 @@ export function useClauseWatch({
             phase: 'failed',
             error: result.error,
           })
+          setWatches((current) =>
+            current.map((entry) =>
+              entry.playerId === target.playerId
+                ? { ...entry, automatic: false }
+                : entry
+            )
+          )
           return
         }
 
@@ -198,7 +212,11 @@ export function useClauseWatch({
       const interval = getClauseCheckInterval(remainingMs)
       const lastCheck = lastCheckRef.current.get(target.playerId) ?? 0
 
-      if (interval !== null && Date.now() - lastCheck >= interval) {
+      if (
+        remainingMs > 0 &&
+        interval !== null &&
+        Date.now() - lastCheck >= interval
+      ) {
         void checkTarget(target)
       }
 
@@ -227,7 +245,10 @@ export function useClauseWatch({
 
       const lastSafePreflight =
         lastSafePreflightRef.current.get(target.playerId) ?? 0
-      if (Date.now() - lastSafePreflight > 3_000) continue
+      if (Date.now() - lastSafePreflight > 3_000) {
+        if (Date.now() - lastCheck >= 1_000) void checkTarget(target)
+        continue
+      }
 
       attemptedRef.current.add(attemptKey)
       void performPurchase(target)
@@ -245,13 +266,20 @@ export function useClauseWatch({
 
   const addWatch = useCallback(
     (player: Player) => {
-      if (!player.buyoutClause || !player.owner?.teamId) return false
+      if (
+        !player.buyoutClause ||
+        !player.owner?.teamId ||
+        !player.playerTeamId
+      ) {
+        return false
+      }
       const target: ClauseWatchTarget = {
         version: CLAUSE_WATCH_STORAGE_VERSION,
         leagueId,
         teamId,
         ownerTeamId: player.owner.teamId,
         playerId: player.id,
+        playerTeamId: player.playerTeamId,
         playerName: player.nickname || player.name,
         expectedClause: player.buyoutClause,
         unlockAt: player.buyoutClauseLockedEndTime ?? null,
@@ -291,7 +319,13 @@ export function useClauseWatch({
         const target = watchesRef.current.find(
           (entry) => entry.playerId === playerId
         )
-        if (target) void checkTarget(target)
+        if (target) {
+          attemptedRef.current.delete(`${target.playerId}:${target.createdAt}`)
+          lastSafePreflightRef.current.delete(target.playerId)
+          void checkTarget(target)
+        }
+      } else {
+        lastSafePreflightRef.current.delete(playerId)
       }
     },
     [checkTarget]

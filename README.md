@@ -96,9 +96,10 @@ datos del proyecto. El histórico de valor procede del endpoint oficial de la
 temporada actual y se conserva únicamente en memoria durante seis horas para
 evitar peticiones repetidas. El navegador persiste la preferencia de idioma,
 pero nunca guarda credenciales ni tokens accesibles desde JavaScript. Si el
-usuario vigila una cláusula, también se guardan localmente el identificador del
-jugador, el propietario esperado, el importe y el momento de desbloqueo; estos
-datos se pueden borrar desde el propio panel.
+usuario vigila una cláusula, también se guardan localmente los identificadores
+del jugador y de su ficha en la plantilla rival, el propietario esperado, el
+importe y el momento de desbloqueo; estos datos se pueden borrar desde el
+propio panel.
 
 La vigilancia no es un servicio en segundo plano: requiere mantener la pestaña
 abierta y el dispositivo despierto. En el último minuto actualiza las

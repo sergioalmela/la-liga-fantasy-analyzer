@@ -17,6 +17,7 @@ const target: ClauseWatchTarget = {
   teamId: 'mine',
   ownerTeamId: 'rival',
   playerId: 'player',
+  playerTeamId: 'player-team',
   playerName: 'Player',
   expectedClause: 20_000_000,
   unlockAt: '2026-08-17T12:01:00Z',
@@ -26,6 +27,7 @@ const target: ClauseWatchTarget = {
 
 const player: Player = {
   id: 'player',
+  playerTeamId: 'player-team',
   name: 'Player',
   positionId: 2,
   playerStatus: 'ok',
@@ -75,6 +77,15 @@ test('preflight stops when price, owner, unlock or balance changes', () => {
   assert.equal(
     evaluateClausePreflight(
       target,
+      { ...player, playerTeamId: 'another-player-team' },
+      30_000_000,
+      NOW
+    ).code,
+    'player-moved'
+  )
+  assert.equal(
+    evaluateClausePreflight(
+      target,
       { ...player, buyoutClauseLockedEndTime: '2026-08-18T12:00:00Z' },
       30_000_000,
       NOW
@@ -100,5 +111,5 @@ test('network checks only become frequent near the unlock', () => {
   assert.equal(getClauseCheckInterval(60_001), null)
   assert.equal(getClauseCheckInterval(60_000), 5_000)
   assert.equal(getClauseCheckInterval(10_000), 1_000)
-  assert.equal(getClauseCheckInterval(0), 1_000)
+  assert.equal(getClauseCheckInterval(0), null)
 })

@@ -8,7 +8,7 @@ import {
   validateFantasyRequestBody,
 } from '../src/lib/fantasy-proxy.ts'
 import { buildActivityRadar } from '../src/services/activity-service.ts'
-import { ApiClient } from '../src/services/api-client.ts'
+import { ApiClient, endpoints } from '../src/services/api-client.ts'
 import {
   buildRankingEvolution,
   parseActivityPlayers,
@@ -587,11 +587,13 @@ test('proxy allowlist rejects external URLs and legacy endpoints', () => {
 })
 
 test('proxy allows only the expected buyout endpoint and exact clause body', () => {
-  const path = '/v1/competition/1/league/league-1/buyout/player-1/pay?x-lang=es'
+  const path =
+    '/v1/competition/1/league/league-1/buyout/player-team-1/pay?x-lang=es'
+  assert.equal(endpoints.market.payBuyout('league-1', 'player-team-1'), path)
   assert.equal(getAllowedFantasyPath(path, 'POST'), path)
   assert.equal(
     getAllowedFantasyPath(
-      '/v1/competition/1/league/league-1/buyout/player-1/delete?x-lang=es',
+      '/v1/competition/1/league/league-1/buyout/player-team-1/delete?x-lang=es',
       'POST'
     ),
     null

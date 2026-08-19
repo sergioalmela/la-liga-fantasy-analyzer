@@ -350,7 +350,8 @@ export default function PlayerOpportunitiesPage() {
                             startingProbabilityLoading={probabilitiesLoading}
                             clauseWatchEnabled={
                               Boolean(player.buyoutClause) &&
-                              Boolean(player.owner?.teamId)
+                              Boolean(player.owner?.teamId) &&
+                              Boolean(player.playerTeamId)
                             }
                             clauseWatched={clauseWatch.watches.some(
                               (target) => target.playerId === player.id
