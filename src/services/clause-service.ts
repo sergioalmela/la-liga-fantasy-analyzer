@@ -67,7 +67,7 @@ export async function payBuyoutClause(
   target: ClauseWatchTarget
 ): Promise<ApiResponse<unknown>> {
   return apiClient.post<unknown>(
-    endpoints.market.payBuyout(target.leagueId, target.playerId),
+    endpoints.market.payBuyout(target.leagueId, target.playerTeamId),
     { buyoutClauseToPay: target.expectedClause }
   )
 }

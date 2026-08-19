@@ -1,6 +1,6 @@
 import type { Player } from '../entities/player.ts'
 
-export const CLAUSE_WATCH_STORAGE_VERSION = 1
+export const CLAUSE_WATCH_STORAGE_VERSION = 2
 
 export interface ClauseWatchTarget {
   version: typeof CLAUSE_WATCH_STORAGE_VERSION
@@ -8,6 +8,7 @@ export interface ClauseWatchTarget {
   teamId: string
   ownerTeamId: string
   playerId: string
+  playerTeamId: string
   playerName: string
   expectedClause: number
   unlockAt: string | null
@@ -46,7 +47,7 @@ export function evaluateClausePreflight(
   teamMoney: number,
   now: number
 ): ClausePreflight {
-  if (!currentPlayer) {
+  if (!currentPlayer || currentPlayer.playerTeamId !== target.playerTeamId) {
     return { code: 'player-moved', ready: false, remainingMs: null }
   }
 
@@ -101,6 +102,7 @@ export function parseStoredClauseWatches(
         typeof record.teamId === 'string' &&
         typeof record.ownerTeamId === 'string' &&
         typeof record.playerId === 'string' &&
+        typeof record.playerTeamId === 'string' &&
         typeof record.playerName === 'string' &&
         typeof record.expectedClause === 'number' &&
         Number.isSafeInteger(record.expectedClause) &&
@@ -116,8 +118,8 @@ export function parseStoredClauseWatches(
 }
 
 export function getClauseCheckInterval(remainingMs: number): number | null {
+  if (remainingMs <= 0) return null
   if (remainingMs > 60_000) return null
   if (remainingMs > 10_000) return 5_000
-  if (remainingMs > 0) return 1_000
   return 1_000
 }
