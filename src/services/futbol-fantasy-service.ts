@@ -12,7 +12,7 @@ const SOURCE_BASE_URL = 'https://www.futbolfantasy.com/laliga/equipos'
 const CACHE_TTL_MS = 6 * 60 * 60 * 1_000
 const FAILURE_CACHE_TTL_MS = 5 * 60 * 1_000
 const FETCH_TIMEOUT_MS = 10_000
-const MAX_RESPONSE_BYTES = 2_000_000
+const MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 const MAX_CONCURRENT_REQUESTS = 4
 
 const TEAM_SLUG_BY_ID: Record<string, string> = {
@@ -71,7 +71,7 @@ async function fetchTeamProbabilities(
     }
 
     const html = await response.text()
-    if (html.length > MAX_RESPONSE_BYTES) {
+    if (new TextEncoder().encode(html).byteLength > MAX_RESPONSE_BYTES) {
       throw new Error('FútbolFantasy response is too large')
     }
 
