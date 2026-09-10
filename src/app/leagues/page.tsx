@@ -7,6 +7,7 @@ import {
   Shield,
   Shirt,
   ShoppingCart,
+  Sparkles,
   Star,
   Trophy,
   Users,
@@ -171,6 +172,14 @@ export default function LeaguesPage() {
                               <Button size="sm" variant="outline">
                                 <Activity className="mr-1 h-4 w-4" />
                                 {t('leagues.radar')}
+                              </Button>
+                            </Link>
+                            <Link
+                              href={`/leagues/${league.id}/${league.team.id}/lineup`}
+                            >
+                              <Button size="sm" variant="outline">
+                                <Sparkles className="mr-1 h-4 w-4" />
+                                {t('leagues.lineupRecommender')}
                               </Button>
                             </Link>
                           </div>
