@@ -7,6 +7,7 @@ import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
 import { SquadAdvisorPanel } from '@/components/player/squad-advisor-panel'
+import { SquadTabs } from '@/components/player/squad-tabs'
 import { StartingProbabilityToggle } from '@/components/player/starting-probability-toggle'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -370,6 +371,8 @@ export default function TeamPlayersPage() {
                 </div>
               )}
             </div>
+
+            <SquadTabs leagueId={leagueId} teamId={teamId} active="players" />
 
             {/* Summary Stats */}
             {!loading && !error && players.length > 0 && (

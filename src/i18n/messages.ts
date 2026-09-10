@@ -37,6 +37,7 @@ export const messages = {
     'leagues.member': 'Miembro',
     'leagues.matchday': 'Jornada',
     'leagues.radar': 'Radar',
+    'leagues.lineupRecommender': 'Once recomendado',
     'leagues.opportunities': 'Oportunidades',
     'leagues.myPlayers': 'Mis jugadores',
     'leagues.market': 'Mercado',
@@ -58,6 +59,9 @@ export const messages = {
       'Señal para revisar antes de vender; combina el cambio de 1, 3 y 7 días.',
     'players.emptyTitle': 'No se encontraron jugadores',
     'players.emptyText': 'Tu plantilla parece estar vacía.',
+    'squadTabs.label': 'Navegación de plantilla',
+    'squadTabs.players': 'Mis jugadores',
+    'squadTabs.lineup': 'Once recomendado',
     'market.renew': 'Añadir o renovar todos en el mercado',
     'market.confirm':
       'Se renovarán {listed} anuncios existentes y se añadirán {unlisted} jugadores al mercado por su valor de mercado actual. Los anuncios existentes deben retirarse antes de renovarlos. ¿Continuar?',
@@ -207,6 +211,7 @@ export const messages = {
     'advisor.defenders': 'Defensas',
     'advisor.midfielders': 'Centrocampistas',
     'advisor.forwards': 'Delanteros',
+    'advisor.coaches': 'Entrenadores',
     'advisor.noPlayer': 'Sin jugador disponible',
     'advisor.needs': 'Posiciones a reforzar',
     'advisor.noNeeds': 'Plantilla equilibrada',
@@ -216,6 +221,32 @@ export const messages = {
     'advisor.noSells': 'Sin ventas claras por ahora',
     'advisor.sellDisclaimer':
       'No vende automáticamente; comprueba jornada, lesión y mercado antes de decidir.',
+    'lineupRecommender.title': 'Recomendador de once',
+    'lineupRecommender.subtitle':
+      'Elige automáticamente la mejor formación y prioriza titulares con al menos un {minimum}% de probabilidad.',
+    'lineupRecommender.loading': 'Calculando el mejor once...',
+    'lineupRecommender.loadError':
+      'No se pudo calcular la recomendación del once.',
+    'lineupRecommender.bestFormation': 'Formación recomendada',
+    'lineupRecommender.aboveMinimum': 'Titulares con ≥ {minimum}%',
+    'lineupRecommender.averageProbability': 'Probabilidad media conocida',
+    'lineupRecommender.riskCount': 'Titulares a revisar',
+    'lineupRecommender.forcedTitle':
+      'La plantilla obliga a revisar algunos puestos',
+    'lineupRecommender.belowMinimum':
+      'Por debajo del {minimum}%: {players}. Se incluyen solo porque ninguna formación completa mejora ese riesgo.',
+    'lineupRecommender.unknownProbability':
+      'Sin una predicción disponible: {players}. Revisa su situación antes de aplicar el once.',
+    'lineupRecommender.unavailable':
+      'Marcados como no disponibles: {players}. Solo aparecen si faltan alternativas de su posición.',
+    'lineupRecommender.recommendedEleven': 'Once recomendado · {formation}',
+    'lineupRecommender.selectionExplanation':
+      'Primero evita bajas y probabilidades inferiores al 50%; después compara probabilidad, rendimiento y tendencia.',
+    'lineupRecommender.noProbability': 'Sin dato',
+    'lineupRecommender.allPlayers': 'Toda la plantilla',
+    'lineupRecommender.allPlayersHint':
+      'Los titulares recomendados aparecen primero. La probabilidad procede de FútbolFantasy.',
+    'lineupRecommender.pointsAverage': '{points} pts de media',
     'detail.back': 'Volver a las ligas',
     'detail.loading': 'Cargando jugador...',
     'detail.loadError': 'No se pudieron cargar los detalles del jugador.',
@@ -226,6 +257,7 @@ export const messages = {
     'detail.status.injured': 'Lesionado',
     'detail.status.suspended': 'Sancionado',
     'detail.status.doubt': 'Duda',
+    'detail.status.outOfLeague': 'Fuera de la liga',
     'detail.status.unknown': 'Desconocido',
     'detail.matchdayPoints': 'Puntos por jornada',
     'detail.matchday': 'Jornada',
@@ -338,6 +370,7 @@ export const messages = {
     'leagues.member': 'Member',
     'leagues.matchday': 'Matchday',
     'leagues.radar': 'Radar',
+    'leagues.lineupRecommender': 'Recommended lineup',
     'leagues.opportunities': 'Opportunities',
     'leagues.myPlayers': 'My Players',
     'leagues.market': 'Market',
@@ -359,6 +392,9 @@ export const messages = {
       'A signal to review before selling, combining the 1, 3 and 7 day changes.',
     'players.emptyTitle': 'No players found',
     'players.emptyText': 'Your squad appears to be empty.',
+    'squadTabs.label': 'Squad navigation',
+    'squadTabs.players': 'My players',
+    'squadTabs.lineup': 'Recommended lineup',
     'market.renew': 'Add / renew all on market',
     'market.confirm':
       'This will renew {listed} existing listings and add {unlisted} players to the market at their current market value. Existing listings must be withdrawn before they can be renewed. Continue?',
@@ -506,6 +542,7 @@ export const messages = {
     'advisor.defenders': 'Defenders',
     'advisor.midfielders': 'Midfielders',
     'advisor.forwards': 'Forwards',
+    'advisor.coaches': 'Coaches',
     'advisor.noPlayer': 'No player available',
     'advisor.needs': 'Positions to strengthen',
     'advisor.noNeeds': 'Balanced squad',
@@ -515,6 +552,32 @@ export const messages = {
     'advisor.noSells': 'No clear sales for now',
     'advisor.sellDisclaimer':
       'Nothing is sold automatically; check the matchday, injury and market before deciding.',
+    'lineupRecommender.title': 'Lineup recommender',
+    'lineupRecommender.subtitle':
+      'Automatically chooses the best formation and prioritizes starters with at least a {minimum}% chance.',
+    'lineupRecommender.loading': 'Calculating the best lineup...',
+    'lineupRecommender.loadError':
+      'The lineup recommendation could not be calculated.',
+    'lineupRecommender.bestFormation': 'Recommended formation',
+    'lineupRecommender.aboveMinimum': 'Starters at ≥ {minimum}%',
+    'lineupRecommender.averageProbability': 'Known average probability',
+    'lineupRecommender.riskCount': 'Starters to review',
+    'lineupRecommender.forcedTitle':
+      'The squad requires a review of some positions',
+    'lineupRecommender.belowMinimum':
+      'Below {minimum}%: {players}. They are included only because no complete formation reduces that risk.',
+    'lineupRecommender.unknownProbability':
+      'No prediction available: {players}. Review their situation before applying the lineup.',
+    'lineupRecommender.unavailable':
+      'Marked unavailable: {players}. They only appear when their position has no alternative.',
+    'lineupRecommender.recommendedEleven': 'Recommended lineup · {formation}',
+    'lineupRecommender.selectionExplanation':
+      'It first avoids unavailable and sub-50% players, then compares probability, performance and trend.',
+    'lineupRecommender.noProbability': 'No data',
+    'lineupRecommender.allPlayers': 'Full squad',
+    'lineupRecommender.allPlayersHint':
+      'Recommended starters appear first. Probability data comes from FútbolFantasy.',
+    'lineupRecommender.pointsAverage': '{points} avg pts',
     'detail.back': 'Back to leagues',
     'detail.loading': 'Loading player...',
     'detail.loadError': 'Failed to load player details.',
@@ -525,6 +588,7 @@ export const messages = {
     'detail.status.injured': 'Injured',
     'detail.status.suspended': 'Suspended',
     'detail.status.doubt': 'Doubtful',
+    'detail.status.outOfLeague': 'Out of the league',
     'detail.status.unknown': 'Unknown',
     'detail.matchdayPoints': 'Matchday points',
     'detail.matchday': 'Matchday',

@@ -16,8 +16,9 @@ cláusulas y el mercado de LALIGA Fantasy durante la temporada 2026/27.
   preferencia persistente en el navegador.
 - Tendencia reciente de valor en Mercado y Oportunidades mediante instantáneas
   diarias locales de los valores actuales de la API.
-- Estimación conservadora del valor a siete días, once recomendado por
-  formación, carencias de plantilla y señales razonadas para revisar ventas.
+- Estimación conservadora del valor a siete días, recomendador automático de
+  formación y once que prioriza probabilidades de titularidad de al menos el
+  50%, carencias de plantilla y señales razonadas para revisar ventas.
 - Radar read-only de actividad, presupuesto, inversión y balance reciente por
   mánager.
 - Validación runtime de las respuestas remotas antes de entregarlas a React.

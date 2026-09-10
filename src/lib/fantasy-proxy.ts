@@ -151,6 +151,11 @@ export function validateFantasyRequestBody(
         [4, 5, 1],
         [5, 3, 2],
         [5, 4, 1],
+        [3, 3, 4],
+        [3, 6, 1],
+        [4, 2, 4],
+        [4, 6, 0],
+        [5, 2, 3],
       ].some(
         ([d, m, s]) => d === defenders && m === midfielders && s === strikers
       )

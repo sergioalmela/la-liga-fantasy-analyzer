@@ -638,6 +638,18 @@ test('proxy validates complete position-safe lineup updates', () => {
     ),
     { valid: false }
   )
+
+  const premiumPayload = {
+    goalkeeper: 'gk',
+    defender: ['d1', 'd2', 'd3', 'd4'],
+    midfield: ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'],
+    striker: [],
+    tactical_formation: [4, 6, 0],
+  }
+  assert.deepEqual(
+    validateFantasyRequestBody('PUT', JSON.stringify(premiumPayload), path),
+    { valid: true, body: JSON.stringify(premiumPayload) }
+  )
 })
 
 test('proxy validates offer decisions and clause increases independently', () => {
