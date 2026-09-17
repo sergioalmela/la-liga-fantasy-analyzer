@@ -4,6 +4,16 @@ const HOUR_IN_MS = 60 * 60 * 1000
 
 export type ClauseUnlockFilter = 'all' | 'unlocked' | '24h' | '48h'
 
+export function isActionableClausePlayer(player: Player): boolean {
+  const status = player.playerStatus.toLowerCase().replace(/[^a-z]/g, '')
+  return (
+    Number.isSafeInteger(player.buyoutClause) &&
+    (player.buyoutClause ?? 0) >= player.marketValue &&
+    player.marketValue > 0 &&
+    !status.includes('outofleague')
+  )
+}
+
 export function calculateSummaryStats(players: Player[]) {
   const totalValue = players.reduce(
     (sum, player) => sum + player.marketValue,
@@ -25,10 +35,10 @@ export function calculateSummaryStats(players: Player[]) {
 
 export function getPlayersWithLowBuyout(players: Player[]): Player[] {
   return players.filter((player) => {
-    if (!player.buyoutClause) return false
+    if (!isActionableClausePlayer(player)) return false
 
     const isBuyoutLowComparedToValue =
-      player.buyoutClause < player.marketValue * 1.2
+      (player.buyoutClause ?? 0) < player.marketValue * 1.2
     const protectionExpiresSoon = isProtectionExpiringSoon(player)
 
     return isBuyoutLowComparedToValue && protectionExpiresSoon
@@ -44,7 +54,7 @@ export function getClauseUnlockRemainingHours(
   player: Player,
   now = Date.now()
 ): number | null {
-  if (!player.buyoutClause) return null
+  if (!isActionableClausePlayer(player)) return null
   if (!player.buyoutClauseLockedEndTime) return 0
 
   const unlockTime = new Date(player.buyoutClauseLockedEndTime).getTime()

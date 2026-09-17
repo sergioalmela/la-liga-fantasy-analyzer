@@ -1,4 +1,5 @@
 import type { Player } from '../entities/player.ts'
+import { isActionableClausePlayer } from '../services/player-analytics-service.ts'
 
 export const CLAUSE_WATCH_STORAGE_VERSION = 2
 
@@ -20,6 +21,7 @@ export type ClausePreflightCode =
   | 'waiting'
   | 'ready'
   | 'player-moved'
+  | 'player-unavailable'
   | 'clause-changed'
   | 'unlock-changed'
   | 'insufficient-balance'
@@ -49,6 +51,10 @@ export function evaluateClausePreflight(
 ): ClausePreflight {
   if (!currentPlayer || currentPlayer.playerTeamId !== target.playerTeamId) {
     return { code: 'player-moved', ready: false, remainingMs: null }
+  }
+
+  if (!isActionableClausePlayer(currentPlayer)) {
+    return { code: 'player-unavailable', ready: false, remainingMs: null }
   }
 
   if (currentPlayer.buyoutClause !== target.expectedClause) {

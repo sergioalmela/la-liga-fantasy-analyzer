@@ -5,6 +5,7 @@ import type { StartingProbability } from '../src/lib/starting-probability.ts'
 import type { MarketTrend } from '../src/services/market-trend-service.ts'
 import {
   buildLineupPayload,
+  getPlayerRecommendationScore,
   getSellCandidates,
   getSquadNeeds,
   recommendBestLineup,
@@ -77,6 +78,30 @@ test('reports minimum squad gaps without inventing players', () => {
     { positionId: 3, missing: 5 },
     { positionId: 4, missing: 3 },
   ])
+})
+
+test('recent form outweighs a misleading season average when availability is equal', () => {
+  const declining = {
+    ...player('declining', 2, 6),
+    recentPoints: [
+      { weekNumber: 3, totalPoints: 1 },
+      { weekNumber: 2, totalPoints: 1 },
+      { weekNumber: 1, totalPoints: 1 },
+    ],
+  }
+  const improving = {
+    ...player('improving', 2, 3),
+    recentPoints: [
+      { weekNumber: 3, totalPoints: 8 },
+      { weekNumber: 2, totalPoints: 8 },
+      { weekNumber: 1, totalPoints: 8 },
+    ],
+  }
+
+  assert.ok(
+    getPlayerRecommendationScore(improving) >
+      getPlayerRecommendationScore(declining)
+  )
 })
 
 test('prioritizes the 50 percent threshold over a higher points average', () => {
@@ -220,4 +245,26 @@ test('only suggests selling surplus non-lineup players with a warning signal', (
     ),
     ['def-5']
   )
+})
+
+test('flags poor recent form for a surplus player outside the lineup', () => {
+  const players = Array.from({ length: 6 }, (_, index) =>
+    player(`def-${index}`, 2, 6)
+  )
+  const declining = {
+    ...players[5],
+    recentPoints: [
+      { weekNumber: 3, totalPoints: 1 },
+      { weekNumber: 2, totalPoints: 1 },
+      { weekNumber: 1, totalPoints: 1 },
+    ],
+  }
+  const result = getSellCandidates(
+    [...players.slice(0, 5), declining],
+    players.slice(0, 4)
+  )
+
+  assert.deepEqual(result, [
+    { player: declining, reasons: ['outside-lineup', 'poor-recent-form'] },
+  ])
 })

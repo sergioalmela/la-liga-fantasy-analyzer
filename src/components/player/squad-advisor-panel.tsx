@@ -26,6 +26,13 @@ const POSITION_KEYS = {
   4: 'advisor.forwards',
 } as const
 
+const SELL_REASON_KEYS = {
+  falling: 'advisor.sellReasonFalling',
+  'low-probability': 'advisor.sellReasonLowProbability',
+  unavailable: 'advisor.sellReasonUnavailable',
+  'poor-recent-form': 'advisor.sellReasonPoorRecentForm',
+} as const
+
 export function SquadAdvisorPanel({
   players,
   probabilities,
@@ -165,13 +172,24 @@ export function SquadAdvisorPanel({
               <TrendingDown className="h-4 w-4" />
               {t('advisor.sellReview')}
             </h3>
-            <p className="text-sm text-red-800">
-              {sells.length > 0
-                ? sells
-                    .map((candidate) => getPlayerDisplayName(candidate.player))
-                    .join(', ')
-                : t('advisor.noSells')}
-            </p>
+            {sells.length > 0 ? (
+              <ul className="space-y-1 text-sm text-red-800">
+                {sells.map((candidate) => (
+                  <li key={candidate.player.id}>
+                    <span className="font-medium">
+                      {getPlayerDisplayName(candidate.player)}
+                    </span>
+                    {' · '}
+                    {candidate.reasons
+                      .filter((reason) => reason !== 'outside-lineup')
+                      .map((reason) => t(SELL_REASON_KEYS[reason]))
+                      .join(', ')}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-red-800">{t('advisor.noSells')}</p>
+            )}
             {sells.length > 0 && (
               <p className="mt-2 text-xs text-red-600">
                 {t('advisor.sellDisclaimer')}

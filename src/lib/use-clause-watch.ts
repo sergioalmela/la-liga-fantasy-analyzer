@@ -12,6 +12,7 @@ import {
   parseStoredClauseWatches,
 } from '@/lib/clause-watch'
 import { checkClauseTarget, payBuyoutClause } from '@/services/clause-service'
+import { isActionableClausePlayer } from '@/services/player-analytics-service'
 
 export type ClauseWatchPhase =
   | 'idle'
@@ -267,6 +268,7 @@ export function useClauseWatch({
   const addWatch = useCallback(
     (player: Player) => {
       if (
+        !isActionableClausePlayer(player) ||
         !player.buyoutClause ||
         !player.owner?.teamId ||
         !player.playerTeamId

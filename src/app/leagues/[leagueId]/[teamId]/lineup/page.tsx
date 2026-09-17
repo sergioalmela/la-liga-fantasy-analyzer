@@ -30,6 +30,10 @@ import {
   type MarketTrend,
 } from '@/services/market-trend-service'
 import {
+  getEffectivePointsAverage,
+  getRecentForm,
+} from '@/services/recent-form-service'
+import {
   buildLineupPayload,
   isPlayerUnavailable,
   MINIMUM_STARTING_PROBABILITY,
@@ -180,7 +184,9 @@ export default function LineupRecommendationPage() {
           (probabilities.get(right.id)?.probability ?? -1) -
           (probabilities.get(left.id)?.probability ?? -1)
         if (probabilityDifference !== 0) return probabilityDifference
-        return right.averagePoints - left.averagePoints
+        return (
+          getEffectivePointsAverage(right) - getEffectivePointsAverage(left)
+        )
       }),
     [lineupIds, players, probabilities]
   )
@@ -408,6 +414,7 @@ export default function LineupRecommendationPage() {
                     {allPlayers.map((player) => {
                       const probability = probabilities.get(player.id)
                       const selected = lineupIds.has(player.id)
+                      const recentForm = getRecentForm(player)
                       return (
                         <div
                           key={player.id}
@@ -458,6 +465,22 @@ export default function LineupRecommendationPage() {
                             {t('lineupRecommender.pointsAverage', {
                               points: player.averagePoints.toFixed(1),
                             })}
+                            {recentForm && (
+                              <span
+                                className={`block text-xs ${
+                                  recentForm.direction === 'up'
+                                    ? 'text-green-700'
+                                    : recentForm.direction === 'down'
+                                      ? 'text-red-700'
+                                      : 'text-gray-500'
+                                }`}
+                              >
+                                {t('lineupRecommender.recentPoints', {
+                                  points: recentForm.average.toFixed(1),
+                                  count: recentForm.games.length,
+                                })}
+                              </span>
+                            )}
                           </p>
                         </div>
                       )

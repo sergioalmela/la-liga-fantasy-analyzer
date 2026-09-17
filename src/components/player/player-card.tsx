@@ -36,6 +36,7 @@ import {
   type MarketTrend,
   type MarketTrendSignal,
 } from '@/services/market-trend-service'
+import { getRecentForm } from '@/services/recent-form-service'
 
 const TREND_SIGNAL_STYLES: Record<MarketTrendSignal, string> = {
   'rising-confirmed': 'bg-green-100 text-green-700',
@@ -99,6 +100,7 @@ export function PlayerCard({
   const buyoutStatus = getBuyoutClauseStatus(player)
   const saleStatus = getSaleStatus(player)
   const trendSignal = marketTrend ? getMarketTrendSignal(marketTrend) : null
+  const recentForm = getRecentForm(player)
   const buyoutMessage = (() => {
     if (!buyoutStatus) return ''
     if (buyoutStatus.status === 'unprotected') return t('player.noProtection')
@@ -336,6 +338,38 @@ export function PlayerCard({
             {t('player.average')})
           </span>
         </div>
+
+        {recentForm && (
+          <div className="flex items-start justify-between gap-3 text-sm">
+            <span className="text-gray-600">{t('player.recentForm')}</span>
+            <div className="text-right">
+              <span
+                className={`font-semibold ${
+                  recentForm.direction === 'up'
+                    ? 'text-green-700'
+                    : recentForm.direction === 'down'
+                      ? 'text-red-700'
+                      : 'text-gray-700'
+                }`}
+              >
+                {t('player.recentFormAverage', {
+                  points: recentForm.average.toFixed(1),
+                  count: recentForm.games.length,
+                })}
+              </span>
+              <p className="text-xs text-gray-500">
+                {recentForm.games
+                  .map((game) =>
+                    t('player.recentFormGame', {
+                      week: game.weekNumber,
+                      points: game.totalPoints,
+                    })
+                  )
+                  .join(' · ')}
+              </p>
+            </div>
+          </div>
+        )}
 
         {player.buyoutClause && (
           <div className="border-t pt-3">
