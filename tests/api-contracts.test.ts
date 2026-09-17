@@ -115,6 +115,32 @@ test('normalizes numeric strings in team players', () => {
   assert.equal(result.data?.[0].marketValue, 34914257)
 })
 
+test('normalizes the last three weekly scores from team player data', () => {
+  const result = parseTeamPlayers({
+    players: [
+      {
+        playerTeamId: 100,
+        playerMaster: {
+          ...playerMaster,
+          lastStats: [
+            { weekNumber: 2, totalPoints: '8' },
+            { weekNumber: 4, totalPoints: 0 },
+            { weekNumber: 1, totalPoints: 3 },
+            { weekNumber: 3, totalPoints: 5 },
+            { weekNumber: 99, totalPoints: 20 },
+          ],
+        },
+      },
+    ],
+  })
+
+  assert.deepEqual(result.data?.[0].recentPoints, [
+    { weekNumber: 4, totalPoints: 0 },
+    { weekNumber: 3, totalPoints: 5 },
+    { weekNumber: 2, totalPoints: 8 },
+  ])
+})
+
 test('normalizes and sorts received player offers', () => {
   assert.deepEqual(
     parsePlayerOffers({

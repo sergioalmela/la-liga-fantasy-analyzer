@@ -1,4 +1,8 @@
-import type { Player, PlayerOffer } from '../entities/player'
+import type {
+  Player,
+  PlayerOffer,
+  RecentPlayerPoints,
+} from '../entities/player'
 import type {
   ActivityPlayer,
   CurrentWeek,
@@ -58,6 +62,38 @@ function unwrapArray(value: unknown, keys: string[] = []): unknown[] | null {
   }
 
   return null
+}
+
+function parseRecentPlayerPoints(
+  playerMaster: JsonRecord
+): RecentPlayerPoints[] {
+  const entries = unwrapArray(
+    playerMaster.lastStats ?? playerMaster.playerStats
+  )
+  if (!entries) return []
+
+  const byWeek = new Map<number, RecentPlayerPoints>()
+  for (const entry of entries) {
+    if (!isRecord(entry)) continue
+    const weekNumber = asNumber(entry.weekNumber)
+    const totalPoints = asNumber(
+      entry.totalPoints ?? entry.points ?? entry.weekPoints
+    )
+    if (
+      weekNumber === null ||
+      !Number.isSafeInteger(weekNumber) ||
+      weekNumber < 1 ||
+      weekNumber > 38 ||
+      totalPoints === null
+    ) {
+      continue
+    }
+    byWeek.set(weekNumber, { weekNumber, totalPoints })
+  }
+
+  return [...byWeek.values()]
+    .sort((left, right) => right.weekNumber - left.weekNumber)
+    .slice(0, 3)
 }
 
 export function parseTeamsMaster(
@@ -283,6 +319,7 @@ function parsePlayerMaster(
   const marketValue = asNumber(playerMaster.marketValue)
   const points = asNumber(playerMaster.points)
   const averagePoints = asNumber(playerMaster.averagePoints)
+  const recentPoints = parseRecentPlayerPoints(playerMaster)
 
   if (
     !id ||
@@ -307,6 +344,7 @@ function parsePlayerMaster(
     marketValue,
     points,
     averagePoints,
+    ...(recentPoints.length > 0 ? { recentPoints } : {}),
     ...extra,
   }
 }

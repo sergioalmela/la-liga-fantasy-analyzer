@@ -6,6 +6,8 @@ import {
   getClauseUnlockRemainingHours,
   getClauseUnlockUrgencyBonus,
   getPlayersWithExpiringProtection,
+  getPlayersWithLowBuyout,
+  isActionableClausePlayer,
 } from '../src/services/player-analytics-service.ts'
 import { sortOpportunities } from '../src/utils/player-sorting-utils.ts'
 
@@ -106,5 +108,53 @@ test('ranks otherwise equal players by clause unlock urgency', () => {
   assert.deepEqual(
     sortOpportunities(players, undefined, NOW).map(({ id }) => id),
     ['unlocked', 'tomorrow', 'later']
+  )
+})
+
+test('excludes stale clauses and out-of-league players from clause opportunities', () => {
+  const normal = { ...player('normal', 2), buyoutClause: 10_000_000 }
+  const belowMarket = { ...player('arriaga', 2), buyoutClause: 9_999_999 }
+  const outOfLeague = {
+    ...player('departed', 2),
+    playerStatus: 'out_of_league',
+  }
+
+  assert.equal(isActionableClausePlayer(normal), true)
+  assert.equal(isActionableClausePlayer(belowMarket), false)
+  assert.equal(isActionableClausePlayer(outOfLeague), false)
+  assert.deepEqual(
+    getPlayersWithLowBuyout([belowMarket, outOfLeague, normal]).map(
+      ({ id }) => id
+    ),
+    ['normal']
+  )
+  assert.equal(getClauseUnlockUrgencyBonus(belowMarket, NOW), 0)
+})
+
+test('recent matchday form corrects misleading season averages in opportunities', () => {
+  const declining = {
+    ...player('christensen-like', null),
+    averagePoints: 6,
+    recentPoints: [
+      { weekNumber: 3, totalPoints: 1 },
+      { weekNumber: 2, totalPoints: 1 },
+      { weekNumber: 1, totalPoints: 1 },
+    ],
+  }
+  const improving = {
+    ...player('gulacsi-like', null),
+    averagePoints: 3,
+    recentPoints: [
+      { weekNumber: 3, totalPoints: 8 },
+      { weekNumber: 2, totalPoints: 8 },
+      { weekNumber: 1, totalPoints: 8 },
+    ],
+  }
+
+  assert.deepEqual(
+    sortOpportunities([declining, improving], undefined, NOW).map(
+      ({ id }) => id
+    ),
+    ['gulacsi-like', 'christensen-like']
   )
 })

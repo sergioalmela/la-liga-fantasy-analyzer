@@ -98,6 +98,18 @@ test('preflight stops when price, owner, unlock or balance changes', () => {
   )
 })
 
+test('preflight refuses a stale below-market clause even at unlock time', () => {
+  assert.equal(
+    evaluateClausePreflight(
+      target,
+      { ...player, marketValue: 21_000_000 },
+      30_000_000,
+      NOW + 60_000
+    ).code,
+    'player-unavailable'
+  )
+})
+
 test('stored watches reject malformed or obsolete entries', () => {
   assert.deepEqual(parseStoredClauseWatches('not-json'), [])
   assert.deepEqual(

@@ -27,6 +27,7 @@ import {
   filterPlayersByClauseUnlock,
   getPlayersWithExpiringProtection,
   getPlayersWithLowBuyout,
+  isActionableClausePlayer,
 } from '@/services/player-analytics-service'
 import { getStartingProbabilities } from '@/services/starting-probability-service'
 import { teamService } from '@/services/team-service'
@@ -41,6 +42,7 @@ export default function PlayerOpportunitiesPage() {
   const teamId = params.teamId as string
 
   const [opponentPlayers, setOpponentPlayers] = useState<Player[]>([])
+  const [excludedPlayers, setExcludedPlayers] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [trends, setTrends] = useState<Map<string, MarketTrend>>(new Map())
@@ -103,9 +105,15 @@ export default function PlayerOpportunitiesPage() {
                 }))
               })
 
-            setOpponentPlayers(allOpponentPlayersWithOwner)
+            const actionablePlayers = allOpponentPlayersWithOwner.filter(
+              isActionableClausePlayer
+            )
+            setOpponentPlayers(actionablePlayers)
+            setExcludedPlayers(
+              allOpponentPlayersWithOwner.length - actionablePlayers.length
+            )
             setTrendsLoading(true)
-            getMarketTrends(allOpponentPlayersWithOwner)
+            getMarketTrends(actionablePlayers)
               .then((marketTrends) => {
                 if (!cancelled) setTrends(marketTrends)
               })
@@ -216,19 +224,36 @@ export default function PlayerOpportunitiesPage() {
               </div>
             )}
 
+            {!loading && !error && (
+              <ClauseWatchPanel controller={clauseWatch} />
+            )}
+
+            {!loading && !error && excludedPlayers > 0 && (
+              <p className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {t('opportunities.excludedPlayers', {
+                  count: excludedPlayers,
+                })}
+              </p>
+            )}
+
             {!loading && !error && opponentPlayers.length === 0 && (
               <div className="text-center py-12">
                 <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   {t('opportunities.emptyTitle')}
                 </h3>
-                <p className="text-gray-600">{t('opportunities.emptyText')}</p>
+                <p className="text-gray-600">
+                  {t(
+                    excludedPlayers > 0
+                      ? 'opportunities.emptyActionableText'
+                      : 'opportunities.emptyText'
+                  )}
+                </p>
               </div>
             )}
 
             {!loading && !error && opponentPlayers.length > 0 && (
               <div className="space-y-8">
-                <ClauseWatchPanel controller={clauseWatch} />
                 {/* Summary Stats */}
                 <div className="grid gap-4 md:grid-cols-4 mb-8">
                   <Card>
@@ -349,7 +374,7 @@ export default function PlayerOpportunitiesPage() {
                             startingProbability={probabilities.get(player.id)}
                             startingProbabilityLoading={probabilitiesLoading}
                             clauseWatchEnabled={
-                              Boolean(player.buyoutClause) &&
+                              isActionableClausePlayer(player) &&
                               Boolean(player.owner?.teamId) &&
                               Boolean(player.playerTeamId)
                             }

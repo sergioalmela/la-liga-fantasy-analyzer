@@ -1,6 +1,7 @@
 import type { Player } from '../entities/player.ts'
 import type { MarketTrend } from '../services/market-trend-service.ts'
 import { getClauseUnlockUrgencyBonus } from '../services/player-analytics-service.ts'
+import { getEffectivePointsAverage } from '../services/recent-form-service.ts'
 
 export type PlayerSortField =
   | 'name'
@@ -37,12 +38,11 @@ function calculateOpportunityScore(
 ): number {
   let score = 0
 
-  // 1. Low buyout opportunities get massive boost (40 points)
+  // 1. Only plausible clauses receive the low-buyout bonus.
   if (player.buyoutClause && player.marketValue) {
     const buyoutRatio = player.buyoutClause / player.marketValue
-    if (buyoutRatio < 1.2) {
+    if (buyoutRatio >= 1 && buyoutRatio < 1.2) {
       score += 40
-      if (buyoutRatio < 1.0) score += 20
     }
   }
 
@@ -61,9 +61,9 @@ function calculateOpportunityScore(
         : Math.max(trend.momentumScore * 0.3, -10)
   }
 
-  // 5. Points performance (0-10 points)
-  const normalizedPoints = Math.min(player.averagePoints / 10, 1)
-  score += normalizedPoints * 10
+  // 5. Recent matchday form is more informative than the season average alone.
+  const effectivePoints = getEffectivePointsAverage(player)
+  score += Math.max(0, Math.min(effectivePoints, 10)) * 2.5
 
   // 6. Sale urgency bonus (0-5 points)
   if (player.saleInfo?.expirationDate) {

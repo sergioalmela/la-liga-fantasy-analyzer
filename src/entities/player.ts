@@ -19,6 +19,11 @@ export interface PlayerOffer {
   amount: number
 }
 
+export interface RecentPlayerPoints {
+  weekNumber: number
+  totalPoints: number
+}
+
 export interface Player {
   id: string
   playerTeamId?: string
@@ -33,6 +38,7 @@ export interface Player {
   marketValue: number
   points: number
   averagePoints: number
+  recentPoints?: RecentPlayerPoints[]
   buyoutClause?: number
   buyoutClauseLockedEndTime?: string
   saleInfo?: {

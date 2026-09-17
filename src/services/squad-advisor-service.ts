@@ -4,6 +4,10 @@ import {
   isMarketTrendBearish,
   type MarketTrend,
 } from './market-trend-service.ts'
+import {
+  getEffectivePointsAverage,
+  getRecentForm,
+} from './recent-form-service.ts'
 
 export const FORMATIONS = {
   '3-4-3': { 1: 1, 2: 3, 3: 4, 4: 3 },
@@ -45,7 +49,11 @@ export interface SquadNeed {
 export interface SellCandidate {
   player: Player
   reasons: Array<
-    'outside-lineup' | 'falling' | 'low-probability' | 'unavailable'
+    | 'outside-lineup'
+    | 'falling'
+    | 'low-probability'
+    | 'unavailable'
+    | 'poor-recent-form'
   >
 }
 
@@ -95,7 +103,7 @@ export function getPlayerRecommendationScore(
     : Math.min(player.marketValue / 1_000_000, 100) * 0.25
   return (
     probabilityScore +
-    player.averagePoints * 12 +
+    getEffectivePointsAverage(player) * 12 +
     player.points * 0.05 +
     (trend?.momentumScore ?? 0) * 0.5 +
     availabilityPenalty(player.playerStatus)
@@ -322,6 +330,9 @@ export function getSellCandidates(
     }
     if (availabilityPenalty(player.playerStatus) <= -1_000) {
       reasons.push('unavailable')
+    }
+    if (getRecentForm(player)?.direction === 'down') {
+      reasons.push('poor-recent-form')
     }
 
     const minimum = MINIMUM_SQUAD[player.positionId as SquadPosition]

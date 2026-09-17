@@ -82,6 +82,10 @@ export const messages = {
     'opportunities.emptyTitle': 'No se encontraron jugadores rivales',
     'opportunities.emptyText':
       'No hay jugadores disponibles de otros mánagers en esta liga.',
+    'opportunities.emptyActionableText':
+      'Los jugadores rivales no tienen una cláusula válida para comparar ahora mismo.',
+    'opportunities.excludedPlayers':
+      'Se han ocultado {count} jugadores sin cláusula válida, con cláusula inferior al valor de mercado o marcados fuera de la liga.',
     'opportunities.lowBuyouts': 'Cláusulas bajas',
     'opportunities.protectionExpiring': 'Protecciones próximas a vencer',
     'opportunities.alert': '🎯 Oportunidades con cláusula baja ({count})',
@@ -118,6 +122,8 @@ export const messages = {
     'clauseWatch.status.ready': 'Desbloqueada y lista para comprar',
     'clauseWatch.status.player-moved':
       'El jugador ya no pertenece al propietario esperado',
+    'clauseWatch.status.player-unavailable':
+      'Jugador no disponible o cláusula inferior al valor de mercado',
     'clauseWatch.status.clause-changed': 'La cláusula ha cambiado',
     'clauseWatch.status.unlock-changed':
       'La fecha de desbloqueo ha cambiado; vuelve a añadir la vigilancia',
@@ -130,6 +136,9 @@ export const messages = {
     'player.owner': 'Propietario:',
     'player.marketValue': 'Valor de mercado:',
     'player.points': 'Puntos:',
+    'player.recentForm': 'Últimas jornadas:',
+    'player.recentFormAverage': '{points} pts de media ({count})',
+    'player.recentFormGame': 'J{week}: {points}',
     'player.average': 'media',
     'player.buyout': 'Cláusula:',
     'player.details': 'Ver detalles del jugador →',
@@ -219,6 +228,11 @@ export const messages = {
       'Las oportunidades que cubren estas carencias aparecen primero.',
     'advisor.sellReview': 'Revisar antes de vender',
     'advisor.noSells': 'Sin ventas claras por ahora',
+    'advisor.sellReasonFalling': 'valor a la baja',
+    'advisor.sellReasonLowProbability': 'poca probabilidad de ser titular',
+    'advisor.sellReasonUnavailable': 'no disponible',
+    'advisor.sellReasonPoorRecentForm':
+      'puntos recientes por debajo de su media',
     'advisor.sellDisclaimer':
       'No vende automáticamente; comprueba jornada, lesión y mercado antes de decidir.',
     'lineupRecommender.title': 'Recomendador de once',
@@ -247,6 +261,8 @@ export const messages = {
     'lineupRecommender.allPlayersHint':
       'Los titulares recomendados aparecen primero. La probabilidad procede de FútbolFantasy.',
     'lineupRecommender.pointsAverage': '{points} pts de media',
+    'lineupRecommender.recentPoints':
+      '{points} pts en las últimas {count} jornadas',
     'detail.back': 'Volver a las ligas',
     'detail.loading': 'Cargando jugador...',
     'detail.loadError': 'No se pudieron cargar los detalles del jugador.',
@@ -414,6 +430,10 @@ export const messages = {
     'opportunities.emptyTitle': 'No opponent players found',
     'opportunities.emptyText':
       'No players available from other managers in this league.',
+    'opportunities.emptyActionableText':
+      'Opponents have no valid clauses to compare right now.',
+    'opportunities.excludedPlayers':
+      '{count} players were hidden because they have no valid clause, a clause below market value, or are marked out of the league.',
     'opportunities.lowBuyouts': 'Low Buyouts',
     'opportunities.protectionExpiring': 'Protection Expiring',
     'opportunities.alert': '🎯 Low Buyout Opportunities ({count})',
@@ -449,6 +469,8 @@ export const messages = {
     'clauseWatch.status.ready': 'Unlocked and ready to buy',
     'clauseWatch.status.player-moved':
       'The player is no longer owned by the expected manager',
+    'clauseWatch.status.player-unavailable':
+      'Player unavailable or clause below market value',
     'clauseWatch.status.clause-changed': 'The clause has changed',
     'clauseWatch.status.unlock-changed':
       'The unlock time changed; add the watch again',
@@ -461,6 +483,9 @@ export const messages = {
     'player.owner': 'Owner:',
     'player.marketValue': 'Market Value:',
     'player.points': 'Points:',
+    'player.recentForm': 'Recent matchdays:',
+    'player.recentFormAverage': '{points} avg pts ({count})',
+    'player.recentFormGame': 'GW{week}: {points}',
     'player.average': 'avg',
     'player.buyout': 'Buyout Clause:',
     'player.details': 'View player details →',
@@ -550,6 +575,10 @@ export const messages = {
       'Opportunities covering these gaps are ranked first.',
     'advisor.sellReview': 'Review before selling',
     'advisor.noSells': 'No clear sales for now',
+    'advisor.sellReasonFalling': 'falling market value',
+    'advisor.sellReasonLowProbability': 'low starting probability',
+    'advisor.sellReasonUnavailable': 'unavailable',
+    'advisor.sellReasonPoorRecentForm': 'recent points below season average',
     'advisor.sellDisclaimer':
       'Nothing is sold automatically; check the matchday, injury and market before deciding.',
     'lineupRecommender.title': 'Lineup recommender',
@@ -578,6 +607,8 @@ export const messages = {
     'lineupRecommender.allPlayersHint':
       'Recommended starters appear first. Probability data comes from FútbolFantasy.',
     'lineupRecommender.pointsAverage': '{points} avg pts',
+    'lineupRecommender.recentPoints':
+      '{points} pts over the last {count} matchdays',
     'detail.back': 'Back to leagues',
     'detail.loading': 'Loading player...',
     'detail.loadError': 'Failed to load player details.',

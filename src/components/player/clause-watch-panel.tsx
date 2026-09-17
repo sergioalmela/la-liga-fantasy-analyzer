@@ -41,6 +41,7 @@ const PHASE_TRANSLATIONS: Record<ClauseWatchPhase, TranslationKey> = {
   waiting: 'clauseWatch.status.waiting',
   ready: 'clauseWatch.status.ready',
   'player-moved': 'clauseWatch.status.player-moved',
+  'player-unavailable': 'clauseWatch.status.player-unavailable',
   'clause-changed': 'clauseWatch.status.clause-changed',
   'unlock-changed': 'clauseWatch.status.unlock-changed',
   'insufficient-balance': 'clauseWatch.status.insufficient-balance',
