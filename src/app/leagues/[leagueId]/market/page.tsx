@@ -2,13 +2,13 @@
 
 import { Users } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AuthGuard } from '@/components/auth/auth-guard'
 import { Navbar } from '@/components/layout/navbar'
 import { PlayerCard } from '@/components/player/player-card'
 import { StartingProbabilityToggle } from '@/components/player/starting-probability-toggle'
 import { BouncingBallLoader } from '@/components/ui/football-loading'
-import { Player } from '@/entities/player'
+import type { Player, RecentPlayerPoints } from '@/entities/player'
 import { useLanguage } from '@/i18n/language-provider'
 import type { StartingProbability } from '@/lib/starting-probability'
 import { useStartingProbabilityPreference } from '@/lib/starting-probability-preference'
@@ -29,6 +29,10 @@ export default function MarketPlayersPage() {
   const [error, setError] = useState('')
   const [trends, setTrends] = useState<Map<string, MarketTrend>>(new Map())
   const [trendsLoading, setTrendsLoading] = useState(false)
+  const [recentFormLoading, setRecentFormLoading] = useState(false)
+  const [recentPoints, setRecentPoints] = useState<
+    Map<string, RecentPlayerPoints[]>
+  >(new Map())
   const [probabilities, setProbabilities] = useState<
     Map<string, StartingProbability>
   >(new Map())
@@ -42,6 +46,9 @@ export default function MarketPlayersPage() {
     let cancelled = false
 
     const loadPlayers = async () => {
+      setRecentPoints(new Map())
+      setRecentFormLoading(false)
+
       try {
         const result = await teamService.getOfficialMarketPlayers(leagueId)
 
@@ -50,6 +57,17 @@ export default function MarketPlayersPage() {
         } else {
           const loadedPlayers = result.data || []
           setPlayers(loadedPlayers)
+          setRecentFormLoading(true)
+          teamService
+            .getMarketRecentPoints(
+              new Set(loadedPlayers.map((player) => player.id))
+            )
+            .then((loadedRecentPoints) => {
+              if (!cancelled) setRecentPoints(loadedRecentPoints)
+            })
+            .finally(() => {
+              if (!cancelled) setRecentFormLoading(false)
+            })
           setTrendsLoading(true)
           getMarketTrends(loadedPlayers)
             .then((marketTrends) => {
@@ -95,6 +113,15 @@ export default function MarketPlayersPage() {
     }
   }, [players, showStartingProbability])
 
+  const playersWithRecentForm = useMemo(
+    () =>
+      players.map((player) => {
+        const points = recentPoints.get(player.id)
+        return points ? { ...player, recentPoints: points } : player
+      }),
+    [players, recentPoints]
+  )
+
   return (
     <AuthGuard>
       <div className="min-h-screen bg-gray-50">
@@ -108,6 +135,9 @@ export default function MarketPlayersPage() {
                   {t('market.title')}
                 </h1>
                 <p className="mt-2 text-gray-600">{t('market.subtitle')}</p>
+                <p className="mt-1 text-xs text-gray-500">
+                  {t('market.recentFormHint')}
+                </p>
               </div>
               <StartingProbabilityToggle
                 enabled={showStartingProbability}
@@ -135,19 +165,22 @@ export default function MarketPlayersPage() {
 
             {!loading && !error && players.length > 0 && (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {sortOpportunities(players, trends).map((player) => (
-                  <PlayerCard
-                    key={player.id}
-                    player={player}
-                    detailsHref={`/leagues/${leagueId}/players/${player.id}`}
-                    showMarketTrend
-                    marketTrend={trends.get(player.id)}
-                    marketTrendLoading={trendsLoading}
-                    showStartingProbability={showStartingProbability}
-                    startingProbability={probabilities.get(player.id)}
-                    startingProbabilityLoading={probabilitiesLoading}
-                  />
-                ))}
+                {sortOpportunities(playersWithRecentForm, trends).map(
+                  (player) => (
+                    <PlayerCard
+                      key={player.id}
+                      player={player}
+                      detailsHref={`/leagues/${leagueId}/players/${player.id}`}
+                      showMarketTrend
+                      marketTrend={trends.get(player.id)}
+                      marketTrendLoading={trendsLoading}
+                      showStartingProbability={showStartingProbability}
+                      startingProbability={probabilities.get(player.id)}
+                      startingProbabilityLoading={probabilitiesLoading}
+                      recentFormLoading={recentFormLoading}
+                    />
+                  )
+                )}
               </div>
             )}
           </div>

@@ -73,6 +73,8 @@ export const messages = {
     'market.title': 'Jugadores del mercado oficial',
     'market.subtitle':
       'Jugadores vendidos directamente por los equipos de LALIGA',
+    'market.recentFormHint':
+      'La forma de las últimas jornadas también influye en el orden de compra.',
     'market.emptyText': 'No hay jugadores disponibles en el mercado oficial.',
     'opportunities.title': 'Oportunidades de jugadores',
     'opportunities.subtitle':
@@ -139,6 +141,7 @@ export const messages = {
     'player.recentForm': 'Últimas jornadas:',
     'player.recentFormAverage': '{points} pts de media ({count})',
     'player.recentFormGame': 'J{week}: {points}',
+    'player.recentFormLoading': 'Consultando…',
     'player.average': 'media',
     'player.buyout': 'Cláusula:',
     'player.details': 'Ver detalles del jugador →',
@@ -421,6 +424,8 @@ export const messages = {
     'market.failedCount': ' {count} failed.',
     'market.title': 'Official Market Players',
     'market.subtitle': 'Players sold directly by LALIGA teams',
+    'market.recentFormHint':
+      'Recent matchday form also influences the buying order.',
     'market.emptyText': 'No players are available on the official market.',
     'opportunities.title': 'Player Opportunities',
     'opportunities.subtitle':
@@ -486,6 +491,7 @@ export const messages = {
     'player.recentForm': 'Recent matchdays:',
     'player.recentFormAverage': '{points} avg pts ({count})',
     'player.recentFormGame': 'GW{week}: {points}',
+    'player.recentFormLoading': 'Loading…',
     'player.average': 'avg',
     'player.buyout': 'Buyout Clause:',
     'player.details': 'View player details →',
