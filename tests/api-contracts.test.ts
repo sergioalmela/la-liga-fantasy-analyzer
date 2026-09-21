@@ -24,6 +24,7 @@ import {
   parsePlayerDetail,
   parsePlayerOffers,
   parsePlayerPurchaseHistory,
+  parsePlayerRecentPoints,
   parseTeamMoney,
   parseTeamPlayers,
   parseTeamsMaster,
@@ -139,6 +140,31 @@ test('normalizes the last three weekly scores from team player data', () => {
     { weekNumber: 3, totalPoints: 5 },
     { weekNumber: 2, totalPoints: 8 },
   ])
+})
+
+test('extracts recent scores from the global player catalogue in one pass', () => {
+  const result = parsePlayerRecentPoints({
+    elements: [
+      {
+        id: 68,
+        weekPoints: [
+          { weekNumber: 6, points: 9 },
+          { weekNumber: 5, points: '4' },
+          { weekNumber: 4, points: 1 },
+          { weekNumber: 3, points: 7 },
+        ],
+      },
+      { id: 69, lastStats: [] },
+      { malformed: true },
+    ],
+  })
+
+  assert.deepEqual(result.data?.get('68'), [
+    { weekNumber: 6, totalPoints: 9 },
+    { weekNumber: 5, totalPoints: 4 },
+    { weekNumber: 4, totalPoints: 1 },
+  ])
+  assert.equal(result.data?.has('69'), false)
 })
 
 test('normalizes and sorts received player offers', () => {

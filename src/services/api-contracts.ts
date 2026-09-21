@@ -67,9 +67,13 @@ function unwrapArray(value: unknown, keys: string[] = []): unknown[] | null {
 function parseRecentPlayerPoints(
   playerMaster: JsonRecord
 ): RecentPlayerPoints[] {
-  const entries = unwrapArray(
-    playerMaster.lastStats ?? playerMaster.playerStats
-  )
+  const entries = [
+    playerMaster.lastStats,
+    playerMaster.playerStats,
+    playerMaster.weekPoints,
+  ]
+    .map((candidate) => unwrapArray(candidate))
+    .find((candidate): candidate is unknown[] => Boolean(candidate?.length))
   if (!entries) return []
 
   const byWeek = new Map<number, RecentPlayerPoints>()
@@ -173,6 +177,26 @@ export function parseActivityPlayers(
   }
 
   return { data: players, error: null }
+}
+
+export function parsePlayerRecentPoints(
+  value: unknown
+): ContractResult<Map<string, RecentPlayerPoints[]>> {
+  const entries = unwrapArray(value, ['elements', 'players'])
+  if (!entries) return { data: null, error: 'Invalid players response' }
+
+  const recentPoints = new Map<string, RecentPlayerPoints[]>()
+  for (const entry of entries) {
+    if (!isRecord(entry)) continue
+    const master = isRecord(entry.playerMaster) ? entry.playerMaster : entry
+    const id = asString(master.id)
+    if (!id) continue
+
+    const points = parseRecentPlayerPoints(master)
+    if (points.length > 0) recentPoints.set(id, points)
+  }
+
+  return { data: recentPoints, error: null }
 }
 
 export function parseTeamMoney(value: unknown): ContractResult<TeamMoney> {

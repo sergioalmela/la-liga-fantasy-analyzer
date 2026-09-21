@@ -1,13 +1,47 @@
-import { Player } from '@/entities/player'
+import type { Player, RecentPlayerPoints } from '@/entities/player'
 import { apiClient, endpoints } from '@/services/api-client'
 import {
   parseOfficialMarketPlayers,
+  parsePlayerRecentPoints,
   parseTeamMoney,
   parseTeamPlayers,
   parseTeamsMaster,
 } from '@/services/api-contracts'
-import type { TeamMoney } from '@/types/api'
-import { ApiResponse } from '@/types/api'
+import type { ApiResponse, TeamMoney } from '@/types/api'
+
+const RECENT_POINTS_CACHE_TTL_MS = 3 * 60 * 60 * 1000
+
+interface RecentPointsCache {
+  expiresAt: number
+  promise: Promise<Map<string, RecentPlayerPoints[]> | null>
+}
+
+let recentPointsCache: RecentPointsCache | null = null
+
+async function getAllRecentPoints(): Promise<Map<
+  string,
+  RecentPlayerPoints[]
+> | null> {
+  if (recentPointsCache && recentPointsCache.expiresAt > Date.now()) {
+    return recentPointsCache.promise
+  }
+
+  const promise = apiClient
+    .get<unknown>(`${endpoints.player.all}?x-lang=es`)
+    .then((result) => {
+      if (result.error || !result.data) return null
+      return parsePlayerRecentPoints(result.data).data
+    })
+
+  recentPointsCache = {
+    expiresAt: Date.now() + RECENT_POINTS_CACHE_TTL_MS,
+    promise,
+  }
+
+  const points = await promise
+  if (!points) recentPointsCache = null
+  return points
+}
 
 export class TeamService {
   async getPlayers(
@@ -89,6 +123,19 @@ export class TeamService {
 
     const parsed = parseOfficialMarketPlayers(marketResult.data, teams.data)
     return { ...parsed, status: marketResult.status }
+  }
+
+  async getMarketRecentPoints(
+    playerIds: ReadonlySet<string>
+  ): Promise<Map<string, RecentPlayerPoints[]>> {
+    if (playerIds.size === 0) return new Map()
+
+    const recentPoints = await getAllRecentPoints()
+    if (!recentPoints) return new Map()
+
+    return new Map(
+      [...recentPoints].filter(([playerId]) => playerIds.has(playerId))
+    )
   }
 }
 

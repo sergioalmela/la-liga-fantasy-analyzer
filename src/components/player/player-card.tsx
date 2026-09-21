@@ -63,6 +63,7 @@ interface PlayerCardProps {
   offers?: PlayerOffer[]
   offersLoading?: boolean
   purchasePrice?: number
+  recentFormLoading?: boolean
   clauseWatchEnabled?: boolean
   clauseWatched?: boolean
   onToggleClauseWatch?: () => void
@@ -87,6 +88,7 @@ export function PlayerCard({
   offers,
   offersLoading = false,
   purchasePrice,
+  recentFormLoading = false,
   clauseWatchEnabled = false,
   clauseWatched = false,
   onToggleClauseWatch,
@@ -368,6 +370,15 @@ export function PlayerCard({
                   .join(' · ')}
               </p>
             </div>
+          </div>
+        )}
+
+        {!recentForm && recentFormLoading && (
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="text-gray-600">{t('player.recentForm')}</span>
+            <span className="text-xs text-gray-500">
+              {t('player.recentFormLoading')}
+            </span>
           </div>
         )}
 
