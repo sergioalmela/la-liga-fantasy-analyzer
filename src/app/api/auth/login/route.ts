@@ -4,6 +4,7 @@ import {
   getTokenLifetimeSeconds,
   isValidProviderToken,
 } from '@/lib/auth-session'
+import { limitLogin } from '@/lib/login-rate-limit'
 import { isSameOriginRequest } from '@/lib/request-origin'
 
 const CLIENT_ID = 'af88bcff-1157-40a0-b579-030728aacf0b'
@@ -23,6 +24,16 @@ function noStoreJson(body: unknown, status = 200): NextResponse {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   if (!isSameOriginRequest(request, true)) {
     return noStoreJson({ error: 'Request origin is not allowed' }, 403)
+  }
+
+  const retryAfter = limitLogin(
+    request.headers,
+    process.env.TRUST_PROXY_IP === 'true'
+  )
+  if (retryAfter) {
+    const response = noStoreJson({ error: 'Too many login attempts' }, 429)
+    response.headers.set('Retry-After', String(retryAfter))
+    return response
   }
 
   const contentLength = Number(request.headers.get('content-length') || '0')
@@ -72,6 +83,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         response_type: 'id_token',
       }),
       cache: 'no-store',
+      signal: AbortSignal.any([request.signal, AbortSignal.timeout(15000)]),
     })
 
     if (!upstream.ok) {

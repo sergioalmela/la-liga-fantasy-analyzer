@@ -28,8 +28,8 @@ test('accepts a direct same-origin request', () => {
 test('reconstructs the public HTTPS origin behind a reverse proxy', () => {
   assert.equal(
     isSameOriginRequest(
-      request('https://laligafantasy.xyz', {
-        host: 'laligafantasy.xyz',
+      request('https://laligafantasy.steamplaytime.com', {
+        host: 'laligafantasy.steamplaytime.com',
         'x-forwarded-proto': 'https',
       })
     ),
@@ -40,9 +40,9 @@ test('reconstructs the public HTTPS origin behind a reverse proxy', () => {
 test('uses an explicit forwarded host when the proxy rewrites Host', () => {
   assert.equal(
     isSameOriginRequest(
-      request('https://laligafantasy.xyz', {
+      request('https://laligafantasy.steamplaytime.com', {
         host: 'localhost:3000',
-        'x-forwarded-host': 'laligafantasy.xyz',
+        'x-forwarded-host': 'laligafantasy.steamplaytime.com',
         'x-forwarded-proto': 'https',
       })
     ),
@@ -53,7 +53,7 @@ test('uses an explicit forwarded host when the proxy rewrites Host', () => {
 test('rejects a different host or protocol behind a reverse proxy', () => {
   const headers = {
     host: 'localhost:3000',
-    'x-forwarded-host': 'laligafantasy.xyz',
+    'x-forwarded-host': 'laligafantasy.steamplaytime.com',
     'x-forwarded-proto': 'https',
   }
 
@@ -62,7 +62,9 @@ test('rejects a different host or protocol behind a reverse proxy', () => {
     false
   )
   assert.equal(
-    isSameOriginRequest(request('http://laligafantasy.xyz', headers)),
+    isSameOriginRequest(
+      request('http://laligafantasy.steamplaytime.com', headers)
+    ),
     false
   )
 })

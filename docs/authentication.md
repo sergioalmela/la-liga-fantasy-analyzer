@@ -46,7 +46,10 @@ consciente para reducir el impacto de XSS sobre el flujo de autenticación.
 ## Responsabilidades del despliegue
 
 - Terminar TLS correctamente y no exponer el servidor Next por HTTP público.
-- Limitar intentos sobre `/api/auth/login` en el reverse proxy o proveedor.
+- Conservar el límite local de 10 intentos/IP/5 minutos en `/api/auth/login`.
+  Con `TRUST_PROXY_IP=true`, Caddy debe sobrescribir `X-Real-IP` y Next no
+  debe ser accesible directamente. El límite es por proceso, sin persistencia;
+  varias réplicas o un CDN requieren adaptar esta frontera y el limitador.
 - Proteger logs, snapshots, backups y herramientas APM.
 - Mantener Node, Next y dependencias de seguridad actualizados.
 - No añadir analítica o scripts de terceros sin actualizar y revisar la CSP.

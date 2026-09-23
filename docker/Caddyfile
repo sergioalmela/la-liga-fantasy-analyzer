@@ -1,0 +1,15 @@
+{
+	admin off
+}
+https://localhost:8443 {
+	tls internal
+	request_body /api/auth/login {
+		max_size 16KB
+	}
+	request_body {
+		max_size 64KB
+	}
+	reverse_proxy web:3000 {
+		header_up X-Real-IP {remote_host}
+	}
+}
