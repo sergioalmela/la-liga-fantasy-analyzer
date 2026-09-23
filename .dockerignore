@@ -1,0 +1,13 @@
+.git
+.github
+node_modules
+dist
+.astro
+.next
+.env*
+*.pem
+*.key
+*.log
+.idea
+.vscode
+coverage

@@ -45,7 +45,7 @@ sin previo aviso al comenzar una temporada.
 ## Requisitos
 
 - Node.js `>=22.13.0` (se recomienda Node 24).
-- Corepack, incluido con las distribuciones compatibles de Node.
+- pnpm 11.16.0: `npm install --global pnpm@11.16.0`.
 
 El proyecto fija `pnpm@11.16.0` para que las instalaciones sean reproducibles.
 
@@ -54,7 +54,7 @@ El proyecto fija `pnpm@11.16.0` para que las instalaciones sean reproducibles.
 ```bash
 git clone https://github.com/sergioalmela/la-liga-fantasy-analyzer.git
 cd la-liga-fantasy-analyzer
-corepack enable
+npm install --global pnpm@11.16.0
 pnpm install --frozen-lockfile
 pnpm dev
 ```
@@ -130,12 +130,58 @@ El catálogo de endpoints verificados y las limitaciones están en
 ## Seguridad de despliegue
 
 - Servir siempre mediante HTTPS.
-- Aplicar rate limiting externo a `/api/auth/login`.
+- Mantener el límite de login y la frontera del reverse proxy descritos abajo.
 - No registrar cookies, cabeceras `Authorization`, passwords ni respuestas del
   proveedor de identidad.
 - Ejecutar `pnpm check`, `pnpm build` y `pnpm audit` antes de desplegar.
 - Rotar cualquier token o contraseña que se haya compartido fuera de la
   aplicación.
+
+## Docker y nuevo VPS
+
+El dominio es **https://laligafantasy.steamplaytime.com**. La aplicación
+deduce el origen público desde el proxy; no necesita un dominio compilado
+ni cambiar el callback oficial de LALIGA. El dominio anterior está retirado.
+
+Para desarrollar: `nvm use`, `pnpm install --frozen-lockfile`, `pnpm dev`.
+Para probar producción en Linux AMD64 o Mac ARM64:
+
+```bash
+docker compose up --build --wait
+docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt /tmp/laliga-root.crt
+NODE_EXTRA_CA_CERTS=/tmp/laliga-root.crt node scripts/smoke.mjs
+docker compose down
+```
+
+Abre <https://localhost:8443>. Para probar el navegador, confía explícitamente
+en ese certificado raíz local en tu navegador/sistema; no desactives las
+cookies Secure ni la validación TLS global. El certificado solo pertenece
+a este entorno Docker. El smoke test lo confía únicamente para ese proceso.
+Reinicia `web` antes de repetir el smoke test, que consume el límite de login.
+No introduce credenciales reales ni llama al proveedor de login.
+
+El contenedor usa el build standalone de Next, Node 24, usuario sin privilegios
+y sistema de archivos de solo lectura. Solo Caddy publica un puerto, limitado
+a localhost. En el VPS, Caddy central publica HTTPS y Next queda en la red
+Docker. La aplicación necesita salida HTTPS hacia sus proveedores, pero no
+SQL, volúmenes de datos ni secretos de servidor. Las cachés en memoria se
+pierden al reiniciar, sin perder datos de la cuenta Fantasy.
+
+Login permite 10 intentos por IP cada cinco minutos, con memoria limitada y
+`Retry-After`. El límite es por proceso y se reinicia al desplegar. Solo activa
+`TRUST_PROXY_IP=true` cuando Next sea inaccesible directamente y Caddy
+sobrescriba `X-Real-IP` con la IP de su conexión. No confíes en cabeceras del
+cliente. Si añades CDN o varias réplicas, adapta antes esta frontera y usa un
+límite compartido o en el proveedor. El login upstream tiene un timeout de 15 s.
+
+**Containers** verifica ambas arquitecturas en PR. Tras fusionar en `main`,
+la ejecución manual con `publish=true` publica
+`ghcr.io/sergioalmela/la-liga-fantasy-analyzer:sha-<commit>`.
+Selecciona el digest resultante en `stack_applications.laligafantasy.image`
+de ansible-infrastructure. El despliegue y rollback están en
+`ansible-infrastructure/docs/APPLICATIONS.md`; no se reconstruye en el VPS.
+Antes del cambio real de DNS queda una prueba manual de login y navegación
+con tu cuenta sobre HTTPS, sin registrar credenciales.
 
 ## Aviso
 

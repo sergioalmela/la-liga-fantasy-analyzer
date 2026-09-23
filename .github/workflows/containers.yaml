@@ -1,0 +1,56 @@
+name: Containers
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the tested commit to GHCR
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  verify:
+    strategy:
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Build and start the production containers
+        run: docker compose up --build --wait
+      - name: Smoke test
+        run: |
+          docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt /tmp/laliga-root.crt
+          NODE_EXTRA_CA_CERTS=/tmp/laliga-root.crt node scripts/smoke.mjs
+      - name: Stop containers
+        if: always()
+        run: docker compose down
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/sergioalmela/la-liga-fantasy-analyzer:sha-${{ github.sha }}
