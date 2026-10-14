@@ -2,36 +2,46 @@
 
 ## Flujo actual
 
-1. El navegador envía email y contraseña por HTTPS a `POST /api/auth/login`.
-2. El backend Next los reenvía al endpoint Azure B2C de LALIGA mediante ROPC.
-3. La contraseña se descarta al terminar la petición y el formulario limpia su
-   estado local.
-4. El access token se guarda en `fantasy_session`, una cookie `HttpOnly`,
-   `SameSite=Strict`, limitada al path `/` y marcada `Secure` en producción.
-5. El proxy Fantasy lee esa cookie en el servidor y añade `Authorization` al
-   upstream. El JavaScript del navegador no puede leer el token.
-6. `DELETE /api/auth/session` elimina la cookie local.
+LALIGA retiró en octubre de 2026 la política ROPC (`B2C_1A_ResourceOwnerv2`)
+que permitía enviar email y contraseña desde el backend. El login usa ahora
+Authorization Code con PKCE contra `B2C_1A_5ULAIP_PARAMETRIZED_SIGNIN`, con el
+mismo client de la app móvil, por lo que admite cuentas de email, Google y
+Apple.
+
+1. `POST /api/auth/authorize` genera `state` y `code_verifier`, los guarda en
+   la cookie `fantasy_login` (`HttpOnly`, `SameSite=Strict`, path `/api/auth`,
+   15 minutos) y devuelve la URL de autorización con el `code_challenge`.
+2. El navegador abre esa URL en una pestaña nueva y el usuario inicia sesión
+   en la web de LALIGA. Esta aplicación nunca ve la contraseña.
+3. LALIGA redirige a `authredirect://com.lfp.laligafantasy?code=...`, que el
+   navegador no puede abrir. El usuario copia esa URL desde la pestaña Red de
+   las herramientas de desarrollo y la pega en el login.
+4. `POST /api/auth/login` valida el esquema y el `state`, y canjea el código
+   con el `code_verifier`. El código es de un solo uso y caduca en minutos; sin
+   el verifier, que nunca sale del servidor, no sirve de nada.
+5. El token (access token si existe; si no, id token) se valida por issuer,
+   audience y expiración y se guarda en `fantasy_session` (`HttpOnly`,
+   `SameSite=Strict`, path `/`, `Secure` en producción, 24 h). El refresh
+   token va en `fantasy_refresh` con path `/api` y hasta 90 días.
+6. `GET /api/auth/session` renueva el token cuando le quedan menos de cinco
+   minutos, y el proxy Fantasy cuando le queda menos de uno. Las renovaciones
+   concurrentes del mismo refresh token comparten una sola petición. Si LALIGA
+   rechaza el refresh token se borran ambas cookies; un fallo temporal no.
+7. El proxy Fantasy añade `Authorization` al upstream. El JavaScript del
+   navegador no puede leer ningún token.
+8. `DELETE /api/auth/session` elimina las tres cookies.
 
 Las respuestas de autenticación y de la API se marcan `Cache-Control: no-store`.
-El código no registra credenciales, tokens ni cuerpos de error del proveedor.
+El código no registra códigos, tokens ni cuerpos de error del proveedor.
 
-## Limitaciones de ROPC
+## Limitaciones
 
-ROPC es un flujo legacy: la aplicación recibe la contraseña en su backend y no
-es compatible con MFA ni con login social. Se mantiene porque LALIGA no ha
-registrado un redirect URI para este proyecto.
-
-El flujo interactivo social observado usa otro cliente y un callback oficial de
-LALIGA. Añadir Google OAuth propio autenticaría al usuario en este proyecto,
-pero no entregaría un token válido para la API Fantasy. No se debe presentar
-como una solución equivalente.
-
-Una integración social correcta requiere una de estas opciones:
-
-- un client OAuth/partner y redirect URI registrados por LALIGA;
-- un flujo oficial para aplicaciones de terceros;
-- importación manual avanzada de una sesión, con validación de firma, issuer,
-  audience y expiración. Esta última opción es frágil y no está implementada.
+El redirect URI pertenece a la app móvil de LALIGA y no se puede registrar uno
+propio, de ahí el paso manual de copiar la URL. Requiere herramientas de
+desarrollo, así que en la práctica solo funciona desde un navegador de
+escritorio; la sesión resultante dura hasta 90 días. Si Google se queda en el
+selector de cuentas, suele bastar con repetir el proceso en una ventana
+privada.
 
 ## CSP y cabeceras
 
@@ -47,6 +57,8 @@ consciente para reducir el impacto de XSS sobre el flujo de autenticación.
 
 - Terminar TLS correctamente y no exponer el servidor Next por HTTP público.
 - Conservar el límite local de 10 intentos/IP/5 minutos en `/api/auth/login`.
+  El refresh token es una credencial de larga duración: no registres cookies
+  ni cabeceras `Set-Cookie`.
   Con `TRUST_PROXY_IP=true`, Caddy debe sobrescribir `X-Real-IP` y Next no
   debe ser accesible directamente. El límite es por proceso, sin persistencia;
   varias réplicas o un CDN requieren adaptar esta frontera y el limitador.
