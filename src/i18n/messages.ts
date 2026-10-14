@@ -11,7 +11,7 @@ export const messages = {
     'common.unknownDate': 'Fecha desconocida',
     'nav.leagues': 'Ligas',
     'nav.logout': 'Cerrar sesión',
-    'login.subtitle': 'Accede con tus credenciales de LALIGA Fantasy',
+    'login.subtitle': 'Accede con tu cuenta de LALIGA Fantasy',
     'login.title': 'Iniciar sesión',
     'login.email': 'Correo electrónico',
     'login.emailPlaceholder': 'Introduce tu correo electrónico',
@@ -19,13 +19,40 @@ export const messages = {
     'login.passwordPlaceholder': 'Introduce tu contraseña',
     'login.submit': 'Entrar',
     'login.submitting': 'Iniciando sesión...',
+    'login.social': '¿Entras con Google o Apple?',
+    'login.socialHelp':
+      'LALIGA solo devuelve el acceso a su app móvil, así que hay que copiarlo a mano desde un navegador de escritorio. Solo hace falta cada 90 días.',
+    'login.step1': '1. Abre el acceso de LALIGA',
+    'login.step1Help':
+      'En la pestaña nueva, antes de iniciar sesión, abre las herramientas de desarrollo (F12), ve a «Red» y activa «Conservar registro». Si el navegador pregunta si quieres abrir una aplicación, cancela.',
+    'login.open': 'Abrir acceso de LALIGA',
+    'login.opening': 'Abriendo...',
+    'login.step2': '2. Pega la URL de vuelta',
+    'login.step2Help':
+      'Filtra la pestaña «Red» por «confirmed», abre esa petición (estado 302) y copia el valor de la cabecera de respuesta «location», que empieza por authredirect://.',
+    'login.redirect': 'URL de vuelta',
+    'login.redirectPlaceholder':
+      'authredirect://com.lfp.laligafantasy/?state=...&code=...',
+    'login.redirectSubmit': 'Entrar con la URL',
+    'login.tip':
+      'El código caduca en pocos minutos. Si Google se queda en el selector de cuentas, repite el proceso en una ventana privada.',
     'login.required': 'Completa todos los campos.',
-    'login.invalid': 'Las credenciales no son válidas.',
-    'login.failed':
-      'La autenticación ha fallado. Comprueba tus credenciales e inténtalo de nuevo.',
+    'login.error.open': 'No se ha podido iniciar el acceso de LALIGA.',
+    'login.error.invalid_credentials': 'Las credenciales no son válidas.',
+    'login.error.invalid_redirect':
+      'No es una URL authredirect:// válida. Copia el valor completo de la cabecera «location».',
+    'login.error.login_cancelled': 'Se canceló el inicio de sesión en LALIGA.',
+    'login.error.login_expired':
+      'El intento de inicio de sesión ha caducado. Vuelve a abrir el acceso de LALIGA desde aquí.',
+    'login.error.login_rejected':
+      'LALIGA ha rechazado el código. Es de un solo uso y caduca en unos minutos: vuelve a empezar.',
+    'login.error.rate_limited': 'Demasiados intentos. Espera unos minutos.',
+    'login.error.provider_unavailable':
+      'El servicio de acceso de LALIGA no está disponible. Inténtalo más tarde.',
+    'login.error.failed': 'No se ha podido iniciar sesión. Inténtalo de nuevo.',
     'login.aboutTitle': 'Sobre esta aplicación:',
     'login.about':
-      'Esta aplicación utiliza tus credenciales de LALIGA Fantasy para consultar tu equipo, la actividad de la liga, las oportunidades de mercado y las cláusulas. La contraseña se reenvía una sola vez al servicio de acceso de LALIGA y no se almacena. El token de sesión resultante se guarda en una cookie HttpOnly.',
+      'Esta aplicación usa tu sesión de LALIGA Fantasy para consultar tu equipo, la actividad de la liga, las oportunidades de mercado y las cláusulas. La contraseña se envía una sola vez al acceso de LALIGA y no se almacena. Los tokens de sesión se guardan en cookies HttpOnly y se renuevan solos durante un máximo de 90 días.',
     'home.redirecting': 'Redirigiendo...',
     'leagues.title': 'Mis ligas',
     'leagues.subtitle': 'Gestiona tus ligas y equipos de fantasy fútbol',
@@ -363,7 +390,7 @@ export const messages = {
     'common.unknownDate': 'Unknown date',
     'nav.leagues': 'Leagues',
     'nav.logout': 'Logout',
-    'login.subtitle': 'Sign in with your LALIGA Fantasy credentials',
+    'login.subtitle': 'Sign in with your LALIGA Fantasy account',
     'login.title': 'Login',
     'login.email': 'Email',
     'login.emailPlaceholder': 'Enter your email',
@@ -371,13 +398,40 @@ export const messages = {
     'login.passwordPlaceholder': 'Enter your password',
     'login.submit': 'Sign in',
     'login.submitting': 'Signing in...',
+    'login.social': 'Do you sign in with Google or Apple?',
+    'login.socialHelp':
+      'LALIGA only hands the session back to its mobile app, so it has to be copied by hand from a desktop browser. You only need to do this every 90 days.',
+    'login.step1': '1. Open the LALIGA sign-in',
+    'login.step1Help':
+      'In the new tab, before signing in, open the developer tools (F12), go to "Network" and enable "Preserve log". If the browser asks to open an application, cancel.',
+    'login.open': 'Open LALIGA sign-in',
+    'login.opening': 'Opening...',
+    'login.step2': '2. Paste the redirect URL',
+    'login.step2Help':
+      'Filter the "Network" tab by "confirmed", open that request (status 302) and copy the value of the "location" response header, which starts with authredirect://.',
+    'login.redirect': 'Redirect URL',
+    'login.redirectPlaceholder':
+      'authredirect://com.lfp.laligafantasy/?state=...&code=...',
+    'login.redirectSubmit': 'Sign in with the URL',
+    'login.tip':
+      'The code expires within a few minutes. If Google gets stuck on the account chooser, repeat the process in a private window.',
     'login.required': 'Please complete all fields.',
-    'login.invalid': 'Invalid credentials.',
-    'login.failed':
-      'Authentication failed. Please check your credentials and try again.',
+    'login.error.open': 'Could not start the LALIGA sign-in.',
+    'login.error.invalid_credentials': 'Invalid credentials.',
+    'login.error.invalid_redirect':
+      'That is not a valid authredirect:// URL. Copy the full value of the "location" header.',
+    'login.error.login_cancelled': 'The LALIGA sign-in was cancelled.',
+    'login.error.login_expired':
+      'This sign-in attempt has expired. Open the LALIGA sign-in again from here.',
+    'login.error.login_rejected':
+      'LALIGA rejected the code. It is single-use and expires within minutes: start again.',
+    'login.error.rate_limited': 'Too many attempts. Wait a few minutes.',
+    'login.error.provider_unavailable':
+      "LALIGA's sign-in service is unavailable. Try again later.",
+    'login.error.failed': 'Sign-in failed. Please try again.',
     'login.aboutTitle': 'About this app:',
     'login.about':
-      "This app uses your LALIGA Fantasy credentials to access your team data, review league activity, track market opportunities, and monitor buyout clauses. Your password is forwarded once to LALIGA's login service and is not stored. The resulting session token is kept in an HttpOnly cookie.",
+      "This app uses your LALIGA Fantasy session to access your team data, review league activity, track market opportunities, and monitor buyout clauses. Your password is sent once to LALIGA's sign-in and is never stored. Session tokens are kept in HttpOnly cookies and renew themselves for up to 90 days.",
     'home.redirecting': 'Redirecting...',
     'leagues.title': 'My Leagues',
     'leagues.subtitle': 'Manage your fantasy football leagues and teams',

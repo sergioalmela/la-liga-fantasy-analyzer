@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { isAuthenticated, login, logout } from '../src/lib/auth.ts'
+import {
+  isAuthenticated,
+  login,
+  loginWithRedirect,
+  logout,
+  startLogin,
+} from '../src/lib/auth.ts'
 import {
   getTokenExpiration,
   getTokenLifetimeSeconds,
@@ -48,7 +54,7 @@ test('validates the current LALIGA provider claims', () => {
   )
 })
 
-test('login returns only session state and sends credentials to the BFF', async (context) => {
+test('login sends credentials to the BFF and returns only session state', async (context) => {
   const originalFetch = globalThis.fetch
   context.after(() => {
     globalThis.fetch = originalFetch
@@ -67,6 +73,66 @@ test('login returns only session state and sends credentials to the BFF', async 
     email: 'manager@example.com',
     password: 'temporary-password',
   })
+})
+
+test('loginWithRedirect sends the redirect URL to the BFF', async (context) => {
+  const originalFetch = globalThis.fetch
+  context.after(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  let requestBody = ''
+  globalThis.fetch = async (_input, init) => {
+    requestBody = String(init?.body)
+    assert.equal(init?.credentials, 'same-origin')
+    return Response.json({ authenticated: true })
+  }
+
+  const redirectUrl = 'authredirect://com.lfp.laligafantasy?code=abc&state=xyz'
+  const result = await loginWithRedirect(redirectUrl)
+  assert.deepEqual(result, { authenticated: true, error: null })
+  assert.deepEqual(JSON.parse(requestBody), { redirectUrl })
+})
+
+test('login maps known error codes and hides unknown ones', async (context) => {
+  const originalFetch = globalThis.fetch
+  context.after(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  let code = 'invalid_credentials'
+  globalThis.fetch = async () =>
+    Response.json({ error: 'message', code }, { status: 400 })
+
+  assert.deepEqual(await login('a@b.c', 'x'), {
+    authenticated: false,
+    error: 'invalid_credentials',
+  })
+  code = 'something_else'
+  assert.deepEqual(await loginWithRedirect('x'), {
+    authenticated: false,
+    error: 'failed',
+  })
+})
+
+test('startLogin returns the provider URL only on success', async (context) => {
+  const originalFetch = globalThis.fetch
+  context.after(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  let ok = true
+  globalThis.fetch = async (input, init) => {
+    assert.equal(String(input), '/api/auth/authorize')
+    assert.equal(init?.method, 'POST')
+    return ok
+      ? Response.json({ url: 'https://login.laliga.es/x' })
+      : Response.json({ error: 'nope' }, { status: 403 })
+  }
+
+  assert.equal(await startLogin(), 'https://login.laliga.es/x')
+  ok = false
+  assert.equal(await startLogin(), null)
 })
 
 test('session helpers use same-origin requests', async (context) => {

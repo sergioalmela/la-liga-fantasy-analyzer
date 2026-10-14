@@ -85,13 +85,16 @@ pnpm audit     # auditoría de dependencias
 
 ## Autenticación y privacidad
 
-El login de email y contraseña usa el flujo ROPC de Azure B2C empleado por la
-aplicación oficial. Es un flujo legacy y solo funciona con cuentas locales; no
-produce una sesión Fantasy para cuentas de Google, Apple o Facebook.
+Las cuentas de email inician sesión con email y contraseña como siempre: el
+backend completa el formulario de la política interactiva de Azure B2C de
+LALIGA y canjea el código con PKCE. La contraseña se envía una sola vez a LALIGA
+y no se persiste. Las cuentas de Google y Apple usan el mismo flujo desde el
+navegador: el usuario inicia sesión en la web de LALIGA y pega la URL
+`authredirect://` de la cabecera `location` de la petición `confirmed`.
 
-La contraseña se envía por HTTPS al backend Next de esta aplicación, se reenvía
-una vez al proveedor de LALIGA y no se persiste. El access token resultante se
-guarda en una cookie `HttpOnly`, `SameSite=Strict` y `Secure` en producción.
+El token de sesión (24 h) y el refresh token (hasta 90 días) se guardan en
+cookies `HttpOnly`, `SameSite=Strict` y `Secure` en producción; la sesión se
+renueva sola en el servidor.
 Los datos Fantasy atraviesan el proxy Next, pero no se almacenan en una base de
 datos del proyecto. El histórico de valor procede del endpoint oficial de la
 temporada actual y se conserva únicamente en memoria durante seis horas para
@@ -167,12 +170,13 @@ Docker. La aplicación necesita salida HTTPS hacia sus proveedores, pero no
 SQL, volúmenes de datos ni secretos de servidor. Las cachés en memoria se
 pierden al reiniciar, sin perder datos de la cuenta Fantasy.
 
-Login permite 10 intentos por IP cada cinco minutos, con memoria limitada y
+El canje del código de login permite 10 intentos por IP cada cinco minutos, con memoria limitada y
 `Retry-After`. El límite es por proceso y se reinicia al desplegar. Solo activa
 `TRUST_PROXY_IP=true` cuando Next sea inaccesible directamente y Caddy
 sobrescriba `X-Real-IP` con la IP de su conexión. No confíes en cabeceras del
 cliente. Si añades CDN o varias réplicas, adapta antes esta frontera y usa un
-límite compartido o en el proveedor. El login upstream tiene un timeout de 15 s.
+límite compartido o en el proveedor. Las peticiones de token a LALIGA tienen un
+timeout de 15 s.
 
 **Containers** verifica ambas arquitecturas en PR. Tras fusionar en `main`,
 la ejecución manual con `publish=true` publica

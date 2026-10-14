@@ -1,14 +1,20 @@
-import type { NextRequest } from 'next/server'
-import { AUTH_COOKIE_NAME } from '@/lib/auth-session'
+import { type NextRequest, NextResponse } from 'next/server'
 import {
   getAllowedFantasyPath,
   preserveUpstreamResponse,
   validateFantasyRequestBody,
 } from '@/lib/fantasy-proxy'
+import {
+  applyResolvedSession,
+  type ResolvedSession,
+  resolveSession,
+} from '@/lib/laliga-session'
 import { isSameOriginRequest } from '@/lib/request-origin'
 
 const API_BASE_URL = 'https://fantasy-api.llt-services.com/api'
 const MAX_REQUEST_BODY_BYTES = 64 * 1024
+// Avoid forwarding a token that could expire while the upstream call runs.
+const MIN_TOKEN_LIFETIME_SECONDS = 60
 
 async function proxyRequest(request: NextRequest): Promise<Response> {
   const method = request.method.toUpperCase()
@@ -38,10 +44,12 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
   }
 
   try {
-    const sessionToken = request.cookies.get(AUTH_COOKIE_NAME)?.value
+    const clientAuthHeader = request.headers.get('authorization')
+    const session: ResolvedSession = clientAuthHeader
+      ? { token: null }
+      : await resolveSession(request, MIN_TOKEN_LIFETIME_SECONDS)
     const authHeader =
-      request.headers.get('authorization') ||
-      (sessionToken ? `Bearer ${sessionToken}` : null)
+      clientAuthHeader || (session.token ? `Bearer ${session.token}` : null)
     const rawBody = method === 'GET' ? '' : await request.text()
 
     if (
@@ -82,7 +90,10 @@ async function proxyRequest(request: NextRequest): Promise<Response> {
       cache: 'no-store',
     })
 
-    return preserveUpstreamResponse(upstream)
+    const proxied = await preserveUpstreamResponse(upstream)
+    const response = new NextResponse(proxied.body, proxied)
+    applyResolvedSession(response, session)
+    return response
   } catch (error) {
     console.error(
       'Fantasy API proxy request failed',

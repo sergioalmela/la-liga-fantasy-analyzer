@@ -1,4 +1,6 @@
 export const AUTH_COOKIE_NAME = 'fantasy_session'
+export const REFRESH_COOKIE_NAME = 'fantasy_refresh'
+export const PENDING_LOGIN_COOKIE_NAME = 'fantasy_login'
 
 export interface JwtPayload {
   aud?: unknown
