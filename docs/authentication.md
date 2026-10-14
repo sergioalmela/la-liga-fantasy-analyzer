@@ -2,46 +2,62 @@
 
 ## Flujo actual
 
-LALIGA retiró en octubre de 2026 la política ROPC (`B2C_1A_ResourceOwnerv2`)
-que permitía enviar email y contraseña desde el backend. El login usa ahora
-Authorization Code con PKCE contra `B2C_1A_5ULAIP_PARAMETRIZED_SIGNIN`, con el
-mismo client de la app móvil, por lo que admite cuentas de email, Google y
-Apple.
+LALIGA retiró en octubre de 2026 la política ROPC (`B2C_1A_ResourceOwnerv2`).
+Ambos flujos usan ahora Authorization Code con PKCE contra
+`B2C_1A_5ULAIP_PARAMETRIZED_SIGNIN`, con el client de la app móvil y su
+redirect `authredirect://com.lfp.laligafantasy`.
+
+### Email y contraseña
+
+1. El navegador envía email y contraseña por HTTPS a `POST /api/auth/login`.
+2. `src/lib/laliga-form-login.ts` reproduce en el servidor la página de login
+   de LALIGA: carga la URL de autorización, lee `SETTINGS` (CSRF, transacción,
+   rutas) y `SA_FIELDS` (nombres de los campos), envía las credenciales a
+   `SelfAsserted` y lee el código de la cabecera `location` del 302 de
+   `confirmed`, sin seguirlo.
+3. Canjea el código con el `code_verifier`, que nunca sale del servidor. La
+   contraseña se descarta al terminar la petición.
+
+Solo un 400 con código `AADB2Cxxxxx` se muestra como credenciales inválidas;
+cualquier otro cambio de la página se trata como proveedor no disponible para
+no culpar al usuario.
+
+### Google y Apple
 
 1. `POST /api/auth/authorize` genera `state` y `code_verifier`, los guarda en
    la cookie `fantasy_login` (`HttpOnly`, `SameSite=Strict`, path `/api/auth`,
-   15 minutos) y devuelve la URL de autorización con el `code_challenge`.
-2. El navegador abre esa URL en una pestaña nueva y el usuario inicia sesión
-   en la web de LALIGA. Esta aplicación nunca ve la contraseña.
-3. LALIGA redirige a `authredirect://com.lfp.laligafantasy?code=...`, que el
-   navegador no puede abrir. El usuario copia esa URL desde la pestaña Red de
-   las herramientas de desarrollo y la pega en el login.
-4. `POST /api/auth/login` valida el esquema y el `state`, y canjea el código
-   con el `code_verifier`. El código es de un solo uso y caduca en minutos; sin
-   el verifier, que nunca sale del servidor, no sirve de nada.
-5. El token (access token si existe; si no, id token) se valida por issuer,
-   audience y expiración y se guarda en `fantasy_session` (`HttpOnly`,
-   `SameSite=Strict`, path `/`, `Secure` en producción, 24 h). El refresh
-   token va en `fantasy_refresh` con path `/api` y hasta 90 días.
-6. `GET /api/auth/session` renueva el token cuando le quedan menos de cinco
-   minutos, y el proxy Fantasy cuando le queda menos de uno. Las renovaciones
-   concurrentes del mismo refresh token comparten una sola petición. Si LALIGA
-   rechaza el refresh token se borran ambas cookies; un fallo temporal no.
-7. El proxy Fantasy añade `Authorization` al upstream. El JavaScript del
-   navegador no puede leer ningún token.
-8. `DELETE /api/auth/session` elimina las tres cookies.
+   15 minutos) y devuelve la URL de autorización.
+2. El usuario inicia sesión en la web de LALIGA en una pestaña nueva y copia
+   desde la pestaña Red el valor `location` de la petición `confirmed`
+   (`authredirect://com.lfp.laligafantasy/?state=...&code=...`).
+3. `POST /api/auth/login` con `redirectUrl` valida el esquema y el `state` y
+   canjea el código. Sin el verifier el código no sirve de nada.
+
+### Sesión
+
+- El token (access token si existe; si no, id token) se valida por issuer,
+  audience y expiración y se guarda en `fantasy_session` (`HttpOnly`,
+  `SameSite=Strict`, path `/`, `Secure` en producción, 24 h). El refresh token
+  va en `fantasy_refresh` con path `/api` y hasta 90 días.
+- `GET /api/auth/session` renueva el token cuando le quedan menos de cinco
+  minutos, y el proxy Fantasy cuando le queda menos de uno. Las renovaciones
+  concurrentes del mismo refresh token comparten una sola petición. Si LALIGA
+  rechaza el refresh token se borran ambas cookies; un fallo temporal no.
+- El proxy Fantasy añade `Authorization` al upstream. El JavaScript del
+  navegador no puede leer ningún token.
+- `DELETE /api/auth/session` elimina las tres cookies.
 
 Las respuestas de autenticación y de la API se marcan `Cache-Control: no-store`.
 El código no registra códigos, tokens ni cuerpos de error del proveedor.
 
 ## Limitaciones
 
-El redirect URI pertenece a la app móvil de LALIGA y no se puede registrar uno
-propio, de ahí el paso manual de copiar la URL. Requiere herramientas de
-desarrollo, así que en la práctica solo funciona desde un navegador de
-escritorio; la sesión resultante dura hasta 90 días. Si Google se queda en el
-selector de cuentas, suele bastar con repetir el proceso en una ventana
-privada.
+El login de email depende de detalles internos de la página de LALIGA
+(`SETTINGS`, `SA_FIELDS`, `SelfAsserted`, `confirmed`); si la rediseñan habrá
+que adaptarlo. El flujo de Google y Apple no se puede automatizar y requiere
+herramientas de desarrollo, así que en la práctica solo funciona desde un
+navegador de escritorio; la sesión resultante dura hasta 90 días. Si Google se
+queda en el selector de cuentas, suele bastar con una ventana privada.
 
 ## CSP y cabeceras
 

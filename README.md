@@ -85,11 +85,12 @@ pnpm audit     # auditoría de dependencias
 
 ## Autenticación y privacidad
 
-El login usa Authorization Code con PKCE contra la política interactiva de
-Azure B2C de LALIGA, así que funciona con cuentas de email, Google y Apple. El
-usuario inicia sesión en la web de LALIGA y, como el redirect pertenece a la
-app móvil (`authredirect://`), copia esa URL desde las herramientas de
-desarrollo y la pega en el login. Esta aplicación nunca recibe la contraseña.
+Las cuentas de email inician sesión con email y contraseña como siempre: el
+backend completa el formulario de la política interactiva de Azure B2C de
+LALIGA y canjea el código con PKCE. La contraseña se envía una sola vez a LALIGA
+y no se persiste. Las cuentas de Google y Apple usan el mismo flujo desde el
+navegador: el usuario inicia sesión en la web de LALIGA y pega la URL
+`authredirect://` de la cabecera `location` de la petición `confirmed`.
 
 El token de sesión (24 h) y el refresh token (hasta 90 días) se guardan en
 cookies `HttpOnly`, `SameSite=Strict` y `Secure` en producción; la sesión se
