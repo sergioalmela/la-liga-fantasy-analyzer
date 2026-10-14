@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server'
-import { AUTH_COOKIE_NAME } from '@/lib/auth-session'
+import { AUTH_COOKIE_NAME, REFRESH_COOKIE_NAME } from '@/lib/auth-session'
 import { isSameOriginRequest } from '@/lib/request-origin'
 import type { StartingProbabilityRequestPlayer } from '@/lib/starting-probability'
 import { getStartingProbabilities } from '@/services/futbol-fantasy-service'
@@ -48,7 +48,10 @@ export async function POST(request: NextRequest): Promise<Response> {
       { status: 403 }
     )
   }
-  if (!request.cookies.get(AUTH_COOKIE_NAME)?.value) {
+  if (
+    !request.cookies.has(AUTH_COOKIE_NAME) &&
+    !request.cookies.has(REFRESH_COOKIE_NAME)
+  ) {
     return Response.json(
       { error: 'Authentication is required' },
       { status: 401 }

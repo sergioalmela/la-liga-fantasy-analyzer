@@ -1,6 +1,6 @@
 interface AuthResponse {
   authenticated?: unknown
-  error?: unknown
+  code?: unknown
 }
 
 async function parseResponse(response: Response): Promise<AuthResponse> {
@@ -11,33 +11,62 @@ async function parseResponse(response: Response): Promise<AuthResponse> {
   }
 }
 
+export type LoginError =
+  | 'invalid_redirect'
+  | 'login_cancelled'
+  | 'login_expired'
+  | 'login_rejected'
+  | 'rate_limited'
+  | 'provider_unavailable'
+  | 'failed'
+
+const LOGIN_ERRORS = new Set<string>([
+  'invalid_redirect',
+  'login_cancelled',
+  'login_expired',
+  'login_rejected',
+  'rate_limited',
+  'provider_unavailable',
+])
+
+/** Starts a LALIGA sign-in and returns the provider URL to open. */
+export async function startLogin(): Promise<string | null> {
+  try {
+    const response = await fetch('/api/auth/authorize', {
+      method: 'POST',
+      credentials: 'same-origin',
+    })
+    const body = (await response.json()) as { url?: unknown }
+    return response.ok && typeof body.url === 'string' ? body.url : null
+  } catch {
+    return null
+  }
+}
+
+/** Completes the sign-in with the `authredirect://` URL copied by the user. */
 export async function login(
-  email: string,
-  password: string
-): Promise<{ authenticated: boolean; error: string | null }> {
+  redirectUrl: string
+): Promise<{ authenticated: boolean; error: LoginError | null }> {
   try {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ redirectUrl }),
     })
     const body = await parseResponse(response)
+    const authenticated = response.ok && body.authenticated === true
 
     return {
-      authenticated: response.ok && body.authenticated === true,
-      error:
-        typeof body.error === 'string'
-          ? body.error
-          : response.ok
-            ? null
-            : 'Authentication failed',
+      authenticated,
+      error: authenticated
+        ? null
+        : typeof body.code === 'string' && LOGIN_ERRORS.has(body.code)
+          ? (body.code as LoginError)
+          : 'failed',
     }
   } catch {
-    return {
-      authenticated: false,
-      error: 'Authentication service is unavailable',
-    }
+    return { authenticated: false, error: 'provider_unavailable' }
   }
 }
 

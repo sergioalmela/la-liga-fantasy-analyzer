@@ -1,6 +1,15 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { AUTH_COOKIE_NAME, getTokenLifetimeSeconds } from '@/lib/auth-session'
+import { AUTH_COOKIE_NAME, REFRESH_COOKIE_NAME } from '@/lib/auth-session'
+import {
+  applyResolvedSession,
+  clearPendingLoginCookie,
+  clearSessionCookies,
+  resolveSession,
+} from '@/lib/laliga-session'
 import { isSameOriginRequest } from '@/lib/request-origin'
+
+// Renew ahead of expiry so a page load is not followed by failing API calls.
+const RENEW_BEFORE_SECONDS = 5 * 60
 
 function response(authenticated: boolean): NextResponse {
   return NextResponse.json(
@@ -9,13 +18,18 @@ function response(authenticated: boolean): NextResponse {
   )
 }
 
-export function GET(request: NextRequest): NextResponse {
-  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value
-  const authenticated = Boolean(token && getTokenLifetimeSeconds(token))
-  const result = response(authenticated)
+export async function GET(request: NextRequest): Promise<NextResponse> {
+  const session = await resolveSession(request, RENEW_BEFORE_SECONDS)
+  const result = response(Boolean(session.token))
+  applyResolvedSession(result, session)
 
-  if (token && !authenticated) {
-    result.cookies.delete(AUTH_COOKIE_NAME)
+  // An expired session without a refresh token cannot be renewed.
+  if (
+    !session.token &&
+    request.cookies.has(AUTH_COOKIE_NAME) &&
+    !request.cookies.has(REFRESH_COOKIE_NAME)
+  ) {
+    clearSessionCookies(result)
   }
 
   return result
@@ -30,6 +44,7 @@ export function DELETE(request: NextRequest): NextResponse {
   }
 
   const result = response(false)
-  result.cookies.delete(AUTH_COOKIE_NAME)
+  clearSessionCookies(result)
+  clearPendingLoginCookie(result)
   return result
 }

@@ -1,17 +1,18 @@
 import { type NextRequest, NextResponse } from 'next/server'
+import { PENDING_LOGIN_COOKIE_NAME } from '@/lib/auth-session'
 import {
-  AUTH_COOKIE_NAME,
-  getTokenLifetimeSeconds,
-  isValidProviderToken,
-} from '@/lib/auth-session'
+  parseAuthorizationRedirect,
+  parsePendingLogin,
+  statesMatch,
+} from '@/lib/laliga-oauth'
+import {
+  clearPendingLoginCookie,
+  exchangeAuthorizationCode,
+  setSessionCookies,
+} from '@/lib/laliga-session'
 import { limitLogin } from '@/lib/login-rate-limit'
 import { isSameOriginRequest } from '@/lib/request-origin'
 
-const CLIENT_ID = 'af88bcff-1157-40a0-b579-030728aacf0b'
-const TOKEN_URL =
-  'https://login.laliga.es/laligadspprob2c.onmicrosoft.com/oauth2/v2.0/token?p=B2C_1A_ResourceOwnerv2'
-const EXPECTED_ISSUER =
-  'https://login.laliga.es/335316eb-f606-4361-bb86-35a7edcdcec1/v2.0/'
 const MAX_BODY_BYTES = 8 * 1024
 
 function noStoreJson(body: unknown, status = 200): NextResponse {
@@ -19,6 +20,10 @@ function noStoreJson(body: unknown, status = 200): NextResponse {
     status,
     headers: { 'Cache-Control': 'no-store' },
   })
+}
+
+function loginError(code: string, error: string, status: number) {
+  return noStoreJson({ error, code }, status)
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -31,7 +36,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     process.env.TRUST_PROXY_IP === 'true'
   )
   if (retryAfter) {
-    const response = noStoreJson({ error: 'Too many login attempts' }, 429)
+    const response = loginError('rate_limited', 'Too many login attempts', 429)
     response.headers.set('Retry-After', String(retryAfter))
     return response
   }
@@ -41,82 +46,63 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return noStoreJson({ error: 'Request body is too large' }, 413)
   }
 
-  let credentials: unknown
+  let body: unknown
   try {
     const rawBody = await request.text()
     if (new TextEncoder().encode(rawBody).byteLength > MAX_BODY_BYTES) {
       return noStoreJson({ error: 'Request body is too large' }, 413)
     }
-    credentials = JSON.parse(rawBody)
+    body = JSON.parse(rawBody)
   } catch {
     return noStoreJson({ error: 'Invalid request body' }, 400)
   }
 
   if (
-    !credentials ||
-    typeof credentials !== 'object' ||
-    !('email' in credentials) ||
-    !('password' in credentials) ||
-    typeof credentials.email !== 'string' ||
-    typeof credentials.password !== 'string'
+    !body ||
+    typeof body !== 'object' ||
+    !('redirectUrl' in body) ||
+    typeof body.redirectUrl !== 'string'
   ) {
-    return noStoreJson({ error: 'Email and password are required' }, 400)
+    return noStoreJson({ error: 'Redirect URL is required' }, 400)
   }
 
-  const email = credentials.email.trim()
-  const password = credentials.password
-  if (!email || email.length > 320 || !password || password.length > 1024) {
-    return noStoreJson({ error: 'Invalid credentials' }, 400)
+  const redirect = parseAuthorizationRedirect(body.redirectUrl)
+  if (redirect.kind === 'denied') {
+    return loginError('login_cancelled', 'Login was cancelled', 400)
+  }
+  if (redirect.kind === 'invalid') {
+    return loginError('invalid_redirect', 'Invalid redirect URL', 400)
   }
 
-  try {
-    const upstream = await fetch(TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'password',
-        client_id: CLIENT_ID,
-        scope: `openid ${CLIENT_ID} offline_access`,
-        redirect_uri: 'authredirect://com.lfp.laligafantasy',
-        username: email,
-        password,
-        response_type: 'id_token',
-      }),
-      cache: 'no-store',
-      signal: AbortSignal.any([request.signal, AbortSignal.timeout(15000)]),
-    })
+  const pendingLogin = parsePendingLogin(
+    request.cookies.get(PENDING_LOGIN_COOKIE_NAME)?.value
+  )
+  if (!pendingLogin || !statesMatch(pendingLogin.state, redirect.state)) {
+    return loginError('login_expired', 'Login attempt has expired', 400)
+  }
 
-    if (!upstream.ok) {
-      return noStoreJson(
-        { error: 'Authentication failed' },
-        upstream.status === 429 ? 429 : 401
-      )
-    }
-
-    const payload = (await upstream.json()) as Record<string, unknown>
-    const accessToken = payload.access_token
-    if (typeof accessToken !== 'string') {
-      return noStoreJson({ error: 'Authentication provider failed' }, 502)
-    }
-
-    const maxAge = getTokenLifetimeSeconds(accessToken)
-    if (
-      !maxAge ||
-      !isValidProviderToken(accessToken, CLIENT_ID, EXPECTED_ISSUER)
-    ) {
-      return noStoreJson({ error: 'Authentication provider failed' }, 502)
-    }
-
-    const response = noStoreJson({ authenticated: true })
-    response.cookies.set(AUTH_COOKIE_NAME, accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/',
-      maxAge,
-    })
+  const result = await exchangeAuthorizationCode(
+    redirect.code,
+    pendingLogin.verifier,
+    request.signal
+  )
+  if (result.status !== 'ok') {
+    const response =
+      result.status === 'rejected'
+        ? loginError('login_rejected', 'Login code was rejected', 401)
+        : result.status === 'rate_limited'
+          ? loginError('rate_limited', 'Too many login attempts', 429)
+          : loginError(
+              'provider_unavailable',
+              'Authentication provider is unavailable',
+              502
+            )
+    if (result.status === 'rejected') clearPendingLoginCookie(response)
     return response
-  } catch {
-    return noStoreJson({ error: 'Authentication provider is unavailable' }, 502)
   }
+
+  const response = noStoreJson({ authenticated: true })
+  setSessionCookies(response, result)
+  clearPendingLoginCookie(response)
+  return response
 }
