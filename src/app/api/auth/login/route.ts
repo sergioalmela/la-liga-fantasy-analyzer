@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { PENDING_LOGIN_COOKIE_NAME } from '@/lib/auth-session'
+import { signInWithPassword } from '@/lib/laliga-form-login'
 import {
   parseAuthorizationRedirect,
   parsePendingLogin,
@@ -8,6 +9,7 @@ import {
 import {
   clearPendingLoginCookie,
   exchangeAuthorizationCode,
+  type SessionTokens,
   setSessionCookies,
 } from '@/lib/laliga-session'
 import { limitLogin } from '@/lib/login-rate-limit'
@@ -57,16 +59,51 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return noStoreJson({ error: 'Invalid request body' }, 400)
   }
 
-  if (
-    !body ||
-    typeof body !== 'object' ||
-    !('redirectUrl' in body) ||
-    typeof body.redirectUrl !== 'string'
-  ) {
-    return noStoreJson({ error: 'Redirect URL is required' }, 400)
+  if (body && typeof body === 'object') {
+    if ('redirectUrl' in body && typeof body.redirectUrl === 'string') {
+      return completeRedirectLogin(request, body.redirectUrl)
+    }
+    if (
+      'email' in body &&
+      'password' in body &&
+      typeof body.email === 'string' &&
+      typeof body.password === 'string'
+    ) {
+      return completePasswordLogin(request, body.email.trim(), body.password)
+    }
   }
 
-  const redirect = parseAuthorizationRedirect(body.redirectUrl)
+  return noStoreJson({ error: 'Email and password are required' }, 400)
+}
+
+async function completePasswordLogin(
+  request: NextRequest,
+  email: string,
+  password: string
+): Promise<NextResponse> {
+  if (!email || email.length > 320 || !password || password.length > 1024) {
+    return loginError('invalid_credentials', 'Invalid credentials', 400)
+  }
+
+  const result = await signInWithPassword(email, password, request.signal)
+  if (result.status === 'ok') return sessionResponse(result)
+  if (result.status === 'invalid_credentials') {
+    return loginError('invalid_credentials', 'Invalid credentials', 401)
+  }
+  return result.status === 'rate_limited'
+    ? loginError('rate_limited', 'Too many login attempts', 429)
+    : loginError(
+        'provider_unavailable',
+        'Authentication provider is unavailable',
+        502
+      )
+}
+
+async function completeRedirectLogin(
+  request: NextRequest,
+  redirectUrl: string
+): Promise<NextResponse> {
+  const redirect = parseAuthorizationRedirect(redirectUrl)
   if (redirect.kind === 'denied') {
     return loginError('login_cancelled', 'Login was cancelled', 400)
   }
@@ -86,23 +123,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     pendingLogin.verifier,
     request.signal
   )
-  if (result.status !== 'ok') {
-    const response =
-      result.status === 'rejected'
-        ? loginError('login_rejected', 'Login code was rejected', 401)
-        : result.status === 'rate_limited'
-          ? loginError('rate_limited', 'Too many login attempts', 429)
-          : loginError(
-              'provider_unavailable',
-              'Authentication provider is unavailable',
-              502
-            )
-    if (result.status === 'rejected') clearPendingLoginCookie(response)
-    return response
-  }
+  if (result.status === 'ok') return sessionResponse(result)
 
+  const response =
+    result.status === 'rejected'
+      ? loginError('login_rejected', 'Login code was rejected', 401)
+      : result.status === 'rate_limited'
+        ? loginError('rate_limited', 'Too many login attempts', 429)
+        : loginError(
+            'provider_unavailable',
+            'Authentication provider is unavailable',
+            502
+          )
+  if (result.status === 'rejected') clearPendingLoginCookie(response)
+  return response
+}
+
+function sessionResponse(tokens: SessionTokens): NextResponse {
   const response = noStoreJson({ authenticated: true })
-  setSessionCookies(response, result)
+  setSessionCookies(response, tokens)
   clearPendingLoginCookie(response)
   return response
 }

@@ -12,6 +12,7 @@ async function parseResponse(response: Response): Promise<AuthResponse> {
 }
 
 export type LoginError =
+  | 'invalid_credentials'
   | 'invalid_redirect'
   | 'login_cancelled'
   | 'login_expired'
@@ -21,6 +22,7 @@ export type LoginError =
   | 'failed'
 
 const LOGIN_ERRORS = new Set<string>([
+  'invalid_credentials',
   'invalid_redirect',
   'login_cancelled',
   'login_expired',
@@ -43,31 +45,40 @@ export async function startLogin(): Promise<string | null> {
   }
 }
 
-/** Completes the sign-in with the `authredirect://` URL copied by the user. */
-export async function login(
-  redirectUrl: string
+async function submitLogin(
+  body: Record<string, string>
 ): Promise<{ authenticated: boolean; error: LoginError | null }> {
   try {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'same-origin',
-      body: JSON.stringify({ redirectUrl }),
+      body: JSON.stringify(body),
     })
-    const body = await parseResponse(response)
-    const authenticated = response.ok && body.authenticated === true
+    const result = await parseResponse(response)
+    const authenticated = response.ok && result.authenticated === true
 
     return {
       authenticated,
       error: authenticated
         ? null
-        : typeof body.code === 'string' && LOGIN_ERRORS.has(body.code)
-          ? (body.code as LoginError)
+        : typeof result.code === 'string' && LOGIN_ERRORS.has(result.code)
+          ? (result.code as LoginError)
           : 'failed',
     }
   } catch {
     return { authenticated: false, error: 'provider_unavailable' }
   }
+}
+
+/** Signs in a LALIGA email account; the BFF completes the provider's form. */
+export function login(email: string, password: string) {
+  return submitLogin({ email, password })
+}
+
+/** Completes a Google/Apple sign-in with the copied `authredirect://` URL. */
+export function loginWithRedirect(redirectUrl: string) {
+  return submitLogin({ redirectUrl })
 }
 
 export async function logout(): Promise<void> {
